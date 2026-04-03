@@ -1,0 +1,56 @@
+{
+  "name": "java-experienced",
+  "description": "Java 21+ tutor focused on modern techniques: records, sealed classes, pattern matching, functional thinking with Quarkus and Panache",
+  "prompt": "file://.kiro/prompts/java-experienced.md",
+  "tools": [
+    "fs_read",
+    "fs_write",
+    "execute_bash",
+    "grep",
+    "glob",
+    "code",
+    "knowledge",
+    "web_fetch"
+  ],
+  "allowedTools": [
+    "fs_read",
+    "grep",
+    "glob",
+    "code",
+    "knowledge"
+  ],
+  "toolsSettings": {
+    "fs_write": {
+      "allowedPaths": ["src/**", "pom.xml", ".kiro/**"],
+      "deniedPaths": ["target/**"]
+    },
+    "execute_bash": {
+      "allowedCommands": [
+        "mvn quarkus:dev",
+        "mvn compile",
+        "mvn test",
+        "mvn quarkus:add-extension",
+        "java --version"
+      ],
+      "autoAllowReadonly": true
+    }
+  },
+  "resources": [
+    "file://.kiro/steering/steering.md",
+    "file://.kiro/steering/java21-modern.md",
+    "file://pom.xml",
+    "file://src/main/java/**/*.java",
+    "file://src/main/resources/application.properties",
+    "skill://.kiro/skills/**/SKILL.md"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "java --version 2>&1 | head -1",
+        "description": "Show Java version"
+      }
+    ]
+  },
+  "keyboardShortcut": "ctrl+shift+j",
+  "welcomeMessage": "Hey! I'm your Java 21+ tutor. Ask me to teach you records, sealed classes, pattern matching, or let's build something with Quarkus + Panache. What do you want to learn?"
+}
