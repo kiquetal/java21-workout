@@ -251,6 +251,37 @@ When chaining `map`/`orElseGet` with sealed types, Java infers the type from the
 .orElseGet(() -> new LendingResult.BookNotAvailable(isbn))
 ```
 
+### 11. Hibernate Dirty Checking — `persist()` vs Managed Entities
+
+When you **create** a new entity, you must call `persist()` — Hibernate doesn't know about it yet:
+
+```java
+var member = new Member();              // just a Java object, not in DB
+member.name = command.name();
+member.email = command.email().value();
+memberRepository.persist(member);       // NOW Hibernate tracks it and saves to DB
+```
+
+When you **update** an existing entity, Hibernate already loaded it — it's "managed". Any field change is auto-flushed at transaction commit:
+
+```java
+memberRepository.findByMemberId(...)    // loads from DB — Hibernate "manages" it
+    .map(member -> {
+        member.name = command.name();   // mutate the managed entity
+        member.email = ...;             // Hibernate tracks these changes
+        // no persist() needed — auto-flushed at commit
+        return new Success(member);
+    })
+```
+
+| | Create | Update |
+|---|---|---|
+| Entity comes from | `new Entity()` — not managed | `repository.find()` — managed |
+| Needs `persist()`? | Yes | No — dirty checking handles it |
+| Needs `@Transactional`? | Yes | Yes |
+
+"Managed" = Hibernate loaded it and is watching it. Change a field → Hibernate detects the diff → flushes the UPDATE at commit. No explicit save needed.
+
 ## Tech Stack
 
 - Java 21+
