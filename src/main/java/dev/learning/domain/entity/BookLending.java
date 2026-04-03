@@ -1,5 +1,6 @@
-package dev.learning.domain;
+package dev.learning.domain.entity;
 
+import dev.learning.domain.LendingStatus;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

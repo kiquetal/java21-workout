@@ -1,4 +1,4 @@
-package dev.learning.domain;
+package dev.learning.domain.type;
 
 public record Email(String value) {
     public Email {

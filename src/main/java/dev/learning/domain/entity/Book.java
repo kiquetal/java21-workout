@@ -1,4 +1,4 @@
-package dev.learning.domain;
+package dev.learning.domain.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;

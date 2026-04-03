@@ -1,12 +1,12 @@
 package dev.learning.resource;
 
-import dev.learning.domain.BookId;
-import dev.learning.domain.BookLending;
-import dev.learning.domain.LendCommand;
-import dev.learning.domain.LendingResult.BookNotAvailable;
-import dev.learning.domain.LendingResult.MemberNotFound;
-import dev.learning.domain.LendingResult.Success;
-import dev.learning.domain.MemberId;
+import dev.learning.domain.command.LendCommand;
+import dev.learning.domain.entity.BookLending;
+import dev.learning.domain.result.LendingResult.BookNotAvailable;
+import dev.learning.domain.result.LendingResult.MemberNotFound;
+import dev.learning.domain.result.LendingResult.Success;
+import dev.learning.domain.type.BookId;
+import dev.learning.domain.type.MemberId;
 import dev.learning.dto.ErrorResponse;
 import dev.learning.dto.LendRequest;
 import dev.learning.dto.LendingResponse;

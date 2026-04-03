@@ -1,14 +1,14 @@
 package dev.learning.service;
 
-import dev.learning.domain.Book;
-import dev.learning.domain.BookLending;
-import dev.learning.domain.LendCommand;
-import dev.learning.domain.LendingResult;
-import dev.learning.domain.LendingResult.BookNotAvailable;
-import dev.learning.domain.LendingResult.MemberNotFound;
-import dev.learning.domain.LendingResult.Success;
+import dev.learning.domain.command.LendCommand;
+import dev.learning.domain.entity.Book;
+import dev.learning.domain.entity.BookLending;
+import dev.learning.domain.entity.Member;
+import dev.learning.domain.result.LendingResult;
+import dev.learning.domain.result.LendingResult.BookNotAvailable;
+import dev.learning.domain.result.LendingResult.MemberNotFound;
+import dev.learning.domain.result.LendingResult.Success;
 import dev.learning.domain.LendingStatus;
-import dev.learning.domain.Member;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;

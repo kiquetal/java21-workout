@@ -1,4 +1,6 @@
-package dev.learning.domain;
+package dev.learning.domain.result;
+
+import dev.learning.domain.entity.BookLending;
 
 public sealed interface LendingResult {
     record Success(BookLending lending) implements LendingResult {}
