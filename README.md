@@ -49,7 +49,52 @@ V2__seed_data.sql        # Dev data
 
 **Dev UI shortcut**: When starting fresh, the Quarkus Dev UI (`/q/dev-ui`) has a Flyway card with a "Create Initial Migration" button that generates DDL from your entities.
 
-### 2. Entities Are Classes, Not Records
+### 2. PanacheEntity Uses Sequences, Not BIGSERIAL
+
+This is a common trap when writing migrations by hand. PostgreSQL has two ways to auto-generate IDs:
+
+**BIGSERIAL (identity)** — the database picks the ID on INSERT:
+```sql
+-- ❌ What you might write by hand
+CREATE TABLE book (
+    id BIGSERIAL PRIMARY KEY,   -- DB assigns 1, 2, 3, 4...
+    title VARCHAR(255) NOT NULL
+);
+```
+
+**BIGINT + SEQUENCE** — Hibernate picks the ID before INSERT:
+```sql
+-- ✅ What Panache actually expects
+CREATE SEQUENCE book_SEQ START WITH 1 INCREMENT BY 50;
+CREATE TABLE book (
+    id BIGINT NOT NULL PRIMARY KEY,   -- Hibernate assigns from sequence
+    title VARCHAR(255) NOT NULL
+);
+```
+
+Why `INCREMENT BY 50`? Hibernate pre-fetches IDs in batches. One `SELECT nextval('book_SEQ')` gives it 50 IDs to use in memory — no DB roundtrip per insert.
+
+```
+BIGSERIAL:                          SEQUENCE (Panache):
+INSERT → DB picks id=1             nextval('book_SEQ') → 1 (gets 1-50)
+INSERT → DB picks id=2             INSERT with id=1  (no DB call)
+INSERT → DB picks id=3             INSERT with id=2  (no DB call)
+...                                 ...
+(roundtrip every insert)            INSERT with id=50 (no DB call)
+                                    nextval('book_SEQ') → 51 (gets 51-100)
+```
+
+`PanacheEntity` uses `GenerationType.SEQUENCE` internally — you can't change it without overriding the `@Id` field. The naming convention is `<TABLE>_SEQ`:
+
+| Entity | Table | Sequence Panache expects |
+|---|---|---|
+| `Book` | `book` | `book_SEQ` |
+| `Member` | `member` | `member_SEQ` |
+| `BookLending` | `book_lending` | `book_lending_SEQ` |
+
+**How to avoid this mistake**: Use the entity-first workflow. Write your entities, set `database.generation=drop-and-create`, run `quarkus dev`, and check the Dev UI → Hibernate ORM card for the generated DDL. It will show you the sequences. Copy that SQL into your Flyway migration, then switch to `database.generation=none`.
+
+### 3. Entities Are Classes, Not Records
 
 Hibernate requires mutable classes with no-arg constructors. Records can't be entities:
 
@@ -66,7 +111,7 @@ public class Book extends PanacheEntity {
 }
 ```
 
-### 3. Records for Everything Else
+### 4. Records for Everything Else
 
 | Use case | Example |
 |---|---|
@@ -76,7 +121,7 @@ public class Book extends PanacheEntity {
 | Panache projections | `record BookSummary(String title, String author)` |
 | Commands | `record LendCommand(Isbn isbn, ...)` |
 
-### 4. Sealed Types as Result Types (Not Exceptions)
+### 5. Sealed Types as Result Types (Not Exceptions)
 
 Model business outcomes explicitly — no exceptions for expected failures:
 
@@ -95,7 +140,7 @@ This is Java's equivalent of F#'s discriminated unions / `Result<'T, 'E>`. Domai
 - Adding a new variant breaks all unhandled switches at compile time
 - Variant names carry business meaning
 
-### 5. Pattern Matching in the Resource
+### 6. Pattern Matching in the Resource
 
 The resource translates domain results to HTTP — one exhaustive switch:
 
@@ -107,7 +152,7 @@ return switch (result) {
 };
 ```
 
-### 6. Parse, Don't Validate (F#-style Value Types)
+### 7. Parse, Don't Validate (F#-style Value Types)
 
 Validate at construction — make invalid states unrepresentable:
 
@@ -122,7 +167,7 @@ public record Isbn(String value) {
 
 Once an `Isbn` exists, it's guaranteed valid. The domain only speaks in typed values, never raw strings.
 
-### 7. DTO ↔ Domain Boundary — Why Can't It Be Like F#?
+### 8. DTO ↔ Domain Boundary — Why Can't It Be Like F#?
 
 In F#, you receive raw data and parse it directly into a domain type in one step:
 
@@ -216,7 +261,7 @@ Client JSON → LendRequest (DTO, raw)
 - **The resource** is the translator — the parsing boundary
 - **The service** never sees DTOs, never knows about HTTP
 
-### 8. Validation Layers
+### 9. Validation Layers
 
 | Layer | Purpose |
 |---|---|
@@ -225,7 +270,7 @@ Client JSON → LendRequest (DTO, raw)
 | `@Column` annotations | Documents entity-to-table mapping |
 | DB constraints (Flyway SQL) | Last line of defense — always there |
 
-### 9. Panache Type Witness Quirk
+### 10. Panache Type Witness Quirk
 
 `findByIdOptional` returns `Optional<Object>`. Use a type witness to get the right type:
 
@@ -237,7 +282,7 @@ Member.findByIdOptional(id)
 Member.<Member>findByIdOptional(id)
 ```
 
-### 10. Java Type Inference in Optional Chains
+### 11. Java Type Inference in Optional Chains
 
 When chaining `map`/`orElseGet` with sealed types, Java infers the type from the first branch and locks it. Use a type witness on `map` to widen:
 
@@ -251,7 +296,7 @@ When chaining `map`/`orElseGet` with sealed types, Java infers the type from the
 .orElseGet(() -> new LendingResult.BookNotAvailable(isbn))
 ```
 
-### 11. Hibernate Dirty Checking — `persist()` vs Managed Entities
+### 12. Hibernate Dirty Checking — `persist()` vs Managed Entities
 
 When you **create** a new entity, you must call `persist()` — Hibernate doesn't know about it yet:
 
