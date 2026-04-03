@@ -16,17 +16,25 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
 
 @Path("/api/members")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MemberResource {
 
+    private static final Logger LOG = Logger.getLogger(MemberResource.class);
+
     @Inject
     MemberService memberService;
 
     @POST
     public Response create(@Valid MemberRequest request) {
+        LOG.tracev("TRACE — raw request: name={0}, email={1}", request.name(), request.email());
+        LOG.debugv("DEBUG — parsing DTO to domain types");
+        LOG.infov("INFO — creating member: {0}", request.name());
+        LOG.warnv("WARN — demo warning for member: {0}", request.name());
+        LOG.errorv("ERROR — demo error for member: {0}", request.name());
         // DTO → Domain (parsing boundary)
         var command = new CreateMemberCommand(
             request.name(),
