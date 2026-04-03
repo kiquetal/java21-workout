@@ -122,15 +122,98 @@ public record Isbn(String value) {
 
 Once an `Isbn` exists, it's guaranteed valid. The domain only speaks in typed values, never raw strings.
 
-### 7. DTO ↔ Domain Boundary
+### 7. DTO ↔ Domain Boundary — Why Can't It Be Like F#?
+
+In F#, you receive raw data and parse it directly into a domain type in one step:
+
+```fsharp
+// F# — the request IS the parsing step, one type does both jobs
+type LendCommand = {
+    Isbn: Isbn           // already validated on construction
+    MemberId: MemberId   // already validated on construction
+    DueDate: DateTime
+}
+
+// JSON deserializer calls Isbn.create("978...") which returns Result<Isbn, Error>
+// If it fails, you never get a LendCommand at all
+```
+
+In Java, you **can't do this** because of Jackson (the JSON deserializer). Jackson needs:
+- A no-arg constructor OR a constructor with **simple types** (String, Long, etc.)
+- It doesn't know how to call `new Isbn("978...")` with validation inside a compact constructor
+- If the `Isbn` constructor throws, Jackson gives you a generic 400 error with no useful message
+
+So you're forced into two steps:
 
 ```
-Client JSON → DTO (request) → Service (domain) → DTO (response) → Client JSON
+Step 1: JSON → DTO (raw types, Jackson can handle this)
+Step 2: DTO → Domain types (you parse and validate here)
+```
+
+Concretely:
+
+```java
+// STEP 1 — dto/LendRequest.java
+// Jackson deserializes JSON into this. Simple types only.
+public record LendRequest(
+    @NotBlank String isbn,       // just a String — Jackson is happy
+    @NotNull Long memberId,      // just a Long — Jackson is happy
+    @NotNull LocalDate dueDate
+) {}
+
+// STEP 2 — resource parses DTO into domain types
+@POST
+public Response lend(@Valid LendRequest request) {
+    // This is the F# "parse" moment — raw strings become domain types
+    var command = new LendCommand(
+        new Isbn(request.isbn()),           // validates here
+        new MemberId(request.memberId()),   // validates here
+        request.dueDate()
+    );
+    var result = lendingService.lend(command);
+    // ...
+}
+
+// domain/LendCommand.java — the service only sees this
+public record LendCommand(Isbn isbn, MemberId memberId, LocalDate dueDate) {}
+```
+
+The service receives `LendCommand` with **already-validated domain types**:
+
+```java
+// Service never sees raw strings. Isbn and MemberId are guaranteed valid.
+public LendingResult lend(LendCommand command) {
+    // command.isbn() → Isbn, not String
+    // command.memberId() → MemberId, not Long
+    // impossible to have invalid data here
+}
+```
+
+**Why F# doesn't have this problem**: F#'s serializers (like Thoth.Json) support custom decoders — you write a function that parses `string → Result<Isbn, Error>` and wire it into deserialization. The parsing IS the deserialization. Java's Jackson doesn't work that way — it constructs objects first, validates later.
+
+**The mental model**:
+
+```
+F#:    JSON ──parse──→ Domain type (one step, decoder does validation)
+Java:  JSON ──jackson──→ DTO (dumb data) ──you parse──→ Domain type (two steps)
+```
+
+The resource layer is where the two-step gap lives. It's the cost of using Jackson. Everything after that boundary is the same as F# — validated types, no raw strings, no nulls.
+
+**The flow through layers**:
+
+```
+Client JSON → LendRequest (DTO, raw)
+            → LendCommand (domain, validated)     ← parsing boundary
+            → LendingService (works with domain)
+            → LendingResult (sealed outcome)
+            → LendingResponse (DTO, shaped for client)
+            → Client JSON
 ```
 
 - **DTOs** live in `dto/`, face the outside world, carry validation annotations
-- **Entities** stay internal, never leak to the API
-- **The resource** is the translator between the two worlds
+- **Domain types** live in `domain/`, guaranteed valid after construction
+- **The resource** is the translator — the parsing boundary
 - **The service** never sees DTOs, never knows about HTTP
 
 ### 8. Validation Layers
