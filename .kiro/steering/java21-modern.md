@@ -27,3 +27,13 @@
 - `sealed interface` = "one of these" (sum type)
 - `record` = "all of these together" (product type)
 - Combine both for expressive domain models
+
+## Modern Concurrency (Java 21+)
+- Virtual threads over platform threads — `Thread.ofVirtual()`, never pool virtual threads
+- Structured concurrency with `StructuredTaskScope` — subtasks bound to parent lifetime
+- `ShutdownOnFailure` to cancel siblings on first error
+- `ShutdownOnSuccess` to return first successful result
+- `ScopedValue` over `ThreadLocal` — immutable, inheritable, no cleanup needed
+- Quarkus: enable virtual threads with `@RunOnVirtualThread` on endpoints
+- Think "one thread per task" — blocking is cheap on virtual threads
+- No `ExecutorService` pools for I/O-bound work — virtual threads replace them
