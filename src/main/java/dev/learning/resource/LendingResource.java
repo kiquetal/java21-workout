@@ -1,9 +1,12 @@
 package dev.learning.resource;
 
+import dev.learning.domain.BookId;
 import dev.learning.domain.BookLending;
+import dev.learning.domain.LendCommand;
 import dev.learning.domain.LendingResult.BookNotAvailable;
 import dev.learning.domain.LendingResult.MemberNotFound;
 import dev.learning.domain.LendingResult.Success;
+import dev.learning.domain.MemberId;
 import dev.learning.dto.ErrorResponse;
 import dev.learning.dto.LendRequest;
 import dev.learning.dto.LendingResponse;
@@ -27,7 +30,12 @@ public class LendingResource {
 
     @POST
     public Response lend(@Valid LendRequest request) {
-        var result = lendingService.lend(request.bookId(), request.memberId(), request.dueDate());
+        var command = new LendCommand(
+            new BookId(request.bookId()),
+            new MemberId(request.memberId()),
+            request.dueDate()
+        );
+        var result = lendingService.lend(command);
         return switch (result) {
             case Success(var lending) -> Response.ok(toResponse(lending)).build();
             case BookNotAvailable(var isbn) -> Response.status(409).entity(new ErrorResponse("Book %s not available".formatted(isbn))).build();
