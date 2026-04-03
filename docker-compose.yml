@@ -23,5 +23,28 @@ services:
       QUARKUS_DATASOURCE_USERNAME: lending
       QUARKUS_DATASOURCE_PASSWORD: lending
 
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    volumes:
+      - ./observability/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
+  grafana-data:
