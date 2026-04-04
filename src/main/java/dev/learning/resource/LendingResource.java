@@ -20,14 +20,10 @@ public class LendingResource
 
     @Inject
     LendingService lendingService;
-
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response register(@Valid LendRequest request) {
-
-
-
-
+    return Response.ok().build();
     }
 }
