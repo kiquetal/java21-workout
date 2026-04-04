@@ -332,6 +332,277 @@ Only fetches `title` and `author` — no entity overhead, no lazy loading traps.
 | Missing `@Transactional` on update | Changes never flush | Add `@Transactional` |
 | `entity.persist()` in service | Bypasses repository | Use `repository.persist(entity)` |
 
+---
+
+## Advanced Hacks
+
+### Set vs List — The Real Reason
+
+It's about how Hibernate identifies elements in the collection.
+
+**List** — ordered, allows duplicates. Hibernate uses **position** to identify elements:
+
+```
+items[0] = BookItem#1
+items[1] = BookItem#2
+items[2] = BookItem#3
+```
+
+Remove `items[1]` → Hibernate doesn't know if the list shifted. It deletes ALL and re-inserts:
+
+```sql
+DELETE FROM book_item WHERE book_id = 1          -- delete all
+INSERT INTO book_item (id, book_id) VALUES (1,1) -- re-insert remaining
+INSERT INTO book_item (id, book_id) VALUES (3,1)
+```
+
+**Set** — unordered, no duplicates. Hibernate uses **entity identity** (PK) to identify elements:
+
+Remove `BookItem#2` → Hibernate knows exactly which row:
+
+```sql
+DELETE FROM book_item WHERE id = 2   -- just this one
+```
+
+**The exception**: `List` with `@OrderColumn` behaves like an indexed collection and avoids the delete-all problem — but adds an ordering column to the table:
+
+```java
+@OneToMany(mappedBy = "book")
+@OrderColumn(name = "position")   // adds "position" INT column to book_item
+public List<BookItem> items;      // now List is efficient, but you need the column
+```
+
+### @Immutable — Read-Only Entities
+
+For reference data that never changes (countries, categories, statuses):
+
+```java
+@Entity
+@Immutable
+public class Country extends PanacheEntity {
+    public String code;
+    public String name;
+}
+```
+
+Hibernate will:
+- Never generate UPDATE statements for this entity
+- Never dirty-check it (faster)
+- Throw an exception if you try to modify it
+
+### @DynamicUpdate — Only Update Changed Columns
+
+By default, Hibernate updates ALL columns even if you changed one:
+
+```sql
+-- Default: you changed only "name" but Hibernate sends everything
+UPDATE member SET name='Bob', email='bob@test.com' WHERE id = 1
+```
+
+With `@DynamicUpdate`:
+
+```java
+@Entity
+@DynamicUpdate
+public class Member extends PanacheEntity {
+    public String name;
+    public String email;
+}
+```
+
+```sql
+-- Only the changed column
+UPDATE member SET name='Bob' WHERE id = 1
+```
+
+Trade-off: Hibernate must diff every field on flush. Worth it for wide tables (many columns), not worth it for small entities.
+
+### @DynamicInsert — Skip Null Columns on Insert
+
+```java
+@Entity
+@DynamicInsert
+public class BookLending extends PanacheEntity {
+    public LocalDate borrowedAt;
+    public LocalDate returnedAt;   // null on creation
+    public LendingStatus status;
+}
+```
+
+Without `@DynamicInsert`:
+```sql
+INSERT INTO book_lending (borrowed_at, returned_at, status) VALUES ('2026-04-03', NULL, 'ACTIVE')
+```
+
+With `@DynamicInsert`:
+```sql
+INSERT INTO book_lending (borrowed_at, status) VALUES ('2026-04-03', 'ACTIVE')
+-- returned_at omitted — DB default kicks in if defined
+```
+
+Useful when the DB has `DEFAULT` values you want to respect.
+
+### @Formula — Computed Fields (Read-Only)
+
+```java
+@Entity
+public class Book extends PanacheEntity {
+    public String title;
+
+    @Formula("(SELECT COUNT(*) FROM book_item bi WHERE bi.book_id = id)")
+    public int copyCount;
+
+    @Formula("(SELECT COUNT(*) FROM book_lending bl WHERE bl.book_id = id AND bl.status = 'ACTIVE')")
+    public int activeLendings;
+}
+```
+
+`@Formula` runs a SQL subquery every time the entity is loaded. Not a column — computed on the fly. Read-only, never persisted.
+
+### @Where — Auto-Filter (Soft Delete)
+
+```java
+@Entity
+@Where(clause = "deleted = false")
+public class Member extends PanacheEntity {
+    public String name;
+    public boolean deleted;
+}
+```
+
+Every query on `Member` automatically appends `WHERE deleted = false`. Soft-deleted members become invisible without changing any query code.
+
+### @SQLRestriction (Hibernate 6.3+ replacement for @Where)
+
+```java
+@Entity
+@SQLRestriction("deleted = false")
+public class Member extends PanacheEntity {
+    public String name;
+    public boolean deleted;
+}
+```
+
+Same as `@Where` but the newer API. Use this on Quarkus 3.x / Hibernate 6.3+.
+
+### @NaturalId — Business Key Lookups
+
+```java
+@Entity
+public class Book extends PanacheEntity {
+    @NaturalId
+    @Column(unique = true, nullable = false, length = 13)
+    public String isbn;
+}
+```
+
+Hibernate caches natural ID lookups in the session:
+
+```java
+// First call → hits DB
+session.byNaturalId(Book.class).using("isbn", "9780132350884").load();
+
+// Second call in same session → cache hit, no DB query
+session.byNaturalId(Book.class).using("isbn", "9780132350884").load();
+```
+
+### @Version — Optimistic Locking
+
+```java
+@Entity
+public class BookItem extends PanacheEntity {
+    @ManyToOne
+    public Book book;
+
+    @Version
+    public int version;
+}
+```
+
+Hibernate adds `WHERE version = ?` to every UPDATE:
+
+```sql
+UPDATE book_item SET book_id=1, version=2 WHERE id=5 AND version=1
+```
+
+If someone else updated the row first (version changed), the update affects 0 rows → Hibernate throws `OptimisticLockException`. No database locks needed.
+
+### @CreationTimestamp / @UpdateTimestamp — Simpler Than @PrePersist
+
+```java
+@Entity
+public class BookLending extends PanacheEntity {
+    @CreationTimestamp
+    @Column(updatable = false)
+    public LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    public LocalDateTime updatedAt;
+}
+```
+
+Hibernate-specific but cleaner than `@PrePersist`/`@PreUpdate` callbacks. One annotation per field, no callback methods needed.
+
+### persistAndFlush vs persist — When It Matters
+
+```java
+repository.persist(entity);          // queued — SQL runs at transaction commit
+repository.persistAndFlush(entity);  // immediate — SQL runs NOW
+```
+
+Use `persistAndFlush` when you need to:
+- Catch constraint violations in a try-catch
+- Get the generated ID immediately
+- Ensure the INSERT happened before the next line runs
+
+### getReference vs find — Avoid Unnecessary SELECTs
+
+```java
+// find — loads the full entity from DB
+var book = entityManager.find(Book.class, 1L);  // SELECT * FROM book WHERE id = 1
+
+// getReference — returns a proxy, NO query
+var book = entityManager.getReference(Book.class, 1L);  // no SQL
+```
+
+Use `getReference` when you only need the entity to set a FK:
+
+```java
+var lending = new BookLending();
+lending.book = entityManager.getReference(Book.class, bookId);  // no SELECT on book
+lending.member = entityManager.getReference(Member.class, memberId);  // no SELECT on member
+lendingRepository.persist(lending);  // only INSERT into book_lending
+```
+
+Three operations, one query instead of three.
+
+### Batch Inserts
+
+```java
+@Transactional
+public void importBooks(List<BookData> books) {
+    for (int i = 0; i < books.size(); i++) {
+        var book = new Book();
+        book.title = books.get(i).title();
+        book.isbn = books.get(i).isbn();
+        bookRepository.persist(book);
+
+        if (i % 50 == 0) {
+            bookRepository.flush();          // send INSERTs to DB
+            bookRepository.getEntityManager().clear();  // free memory
+        }
+    }
+}
+```
+
+Without flush/clear, Hibernate keeps all entities in memory → OOM on large imports.
+
+Configure batch size in `application.properties`:
+
+```properties
+quarkus.hibernate-orm.jdbc.statement-batch-size=50
+```
+
 ## Quick Reference
 
 ```
