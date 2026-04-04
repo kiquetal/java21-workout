@@ -9,4 +9,5 @@ public sealed interface LendingResult {
     record MemberNotFound(MemberId memberId) implements LendingResult{}
     record BookNotFound(String bookId) implements LendingResult{}
     record MemberInDefault(MemberId memberId) implements LendingResult{}
+    record MaximumLimitReached(MemberId memberId) implements LendingResult {}
 }
