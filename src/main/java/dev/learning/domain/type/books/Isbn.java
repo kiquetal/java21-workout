@@ -1,4 +1,4 @@
-package dev.learning.domain.type;
+package dev.learning.domain.type.books;
 
 public record Isbn(String value) {
     public Isbn {
