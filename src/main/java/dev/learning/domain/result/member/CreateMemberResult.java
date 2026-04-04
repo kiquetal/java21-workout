@@ -1,4 +1,4 @@
-package dev.learning.domain.result;
+package dev.learning.domain.result.member;
 
 import dev.learning.domain.entity.Member;
 

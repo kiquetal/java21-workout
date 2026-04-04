@@ -2,9 +2,9 @@ package dev.learning.service;
 
 import dev.learning.domain.command.CreateMemberCommand;
 import dev.learning.domain.entity.Member;
-import dev.learning.domain.result.CreateMemberResult;
-import dev.learning.domain.result.CreateMemberResult.EmailAlreadyExists;
-import dev.learning.domain.result.CreateMemberResult.Success;
+import dev.learning.domain.result.member.CreateMemberResult;
+import dev.learning.domain.result.member.CreateMemberResult.EmailAlreadyExists;
+import dev.learning.domain.result.member.CreateMemberResult.Success;
 import dev.learning.repository.MemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

@@ -1,4 +1,4 @@
-package dev.learning.domain.result;
+package dev.learning.domain.result.lending;
 
 import dev.learning.domain.type.MemberId;
 import dev.learning.domain.type.lending.BookLendingType;
