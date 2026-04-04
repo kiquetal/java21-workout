@@ -160,6 +160,178 @@ public List<BookItem> items;
 public Set<BookItem> items;
 ```
 
+## N+1 Problem
+
+Loading 10 books, each with items:
+
+```java
+var books = bookRepository.listAll();  // 1 query: SELECT * FROM book
+for (var book : books) {
+    book.items.size();                 // 10 queries: SELECT * FROM book_item WHERE book_id = ?
+}
+// Total: 11 queries for 10 books ❌
+```
+
+Fix with `@Fetch(FetchMode.SUBSELECT)`:
+
+```java
+@OneToMany(mappedBy = "book", fetch = FetchType.LAZY)
+@Fetch(FetchMode.SUBSELECT)
+public Set<BookItem> items;
+// 1 query for books + 1 query for ALL items = 2 queries ✅
+```
+
+Or fix with a JPQL join fetch:
+
+```java
+// In repository
+public List<Book> findAllWithItems() {
+    return find("SELECT b FROM Book b LEFT JOIN FETCH b.items").list();
+}
+// 1 query ✅
+```
+
+## @OneToOne — Tricky, Prefer @ManyToOne
+
+```java
+// ❌ @OneToOne on the non-owning side is ALWAYS eager loaded
+@Entity
+public class Member extends PanacheEntity {
+    @OneToOne(mappedBy = "member")
+    public MemberProfile profile;   // Hibernate can't proxy this — always loads it
+}
+
+// ✅ Use @ManyToOne instead — lazy works correctly
+@Entity
+public class MemberProfile extends PanacheEntity {
+    @ManyToOne(fetch = FetchType.LAZY)
+    public Member member;   // just don't add the other side
+}
+```
+
+`@OneToOne` on the non-owning side can't be lazy because Hibernate needs to know if it's null or not — which requires a query. `@ManyToOne` doesn't have this problem.
+
+## @Enumerated — Always Use STRING
+
+```java
+// ❌ Default is ORDINAL — stores 0, 1, 2 — breaks if you reorder the enum
+@Enumerated
+public LendingStatus status;
+
+// ✅ STRING — stores "ACTIVE", "RETURNED" — safe to reorder
+@Enumerated(EnumType.STRING)
+@Column(length = 20)
+public LendingStatus status;
+```
+
+## @Column Tricks
+
+```java
+// Not nullable
+@Column(nullable = false)
+public String title;
+
+// Fixed length (useful for ISBN, status codes)
+@Column(length = 13)
+public String isbn;
+
+// Not updatable — set once, never change
+@Column(updatable = false)
+public LocalDate createdAt;
+
+// Not insertable — DB generates it (e.g., trigger, default)
+@Column(insertable = false)
+public LocalDate generatedField;
+
+// Unique constraint
+@Column(unique = true)
+public String email;
+```
+
+## @Table — Customize Table Name
+
+```java
+// Class name doesn't match table name
+@Entity
+@Table(name = "book_lending")
+public class BookLending extends PanacheEntity { }
+```
+
+Without `@Table`, Hibernate uses the class name as the table name. Use it when your table name has underscores or differs from the class name.
+
+## Composite Unique Constraints
+
+```java
+@Entity
+@Table(
+    name = "book_author",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"book_id", "author_id"})
+)
+public class BookAuthor extends PanacheEntity {
+    @ManyToOne public Book book;
+    @ManyToOne public Author author;
+}
+```
+
+Prevents duplicate book-author pairs at the DB level.
+
+## @PrePersist / @PreUpdate — Auto-Set Fields
+
+```java
+@Entity
+public class Book extends PanacheEntity {
+    public String title;
+
+    @Column(updatable = false)
+    public LocalDateTime createdAt;
+
+    public LocalDateTime updatedAt;
+
+    @PrePersist
+    void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+}
+```
+
+No need to set timestamps manually — Hibernate calls these before persist/update.
+
+## Panache Projections — Query Into Records
+
+Don't load the full entity when you only need a few fields:
+
+```java
+// DTO
+public record BookSummary(String title, String author) {}
+
+// Repository
+public List<BookSummary> findSummaries() {
+    return find("SELECT title, author FROM Book")
+        .project(BookSummary.class)
+        .list();
+}
+```
+
+Only fetches `title` and `author` — no entity overhead, no lazy loading traps.
+
+## Common Mistakes
+
+| Mistake | Problem | Fix |
+|---|---|---|
+| `@OneToMany` without `mappedBy` | Creates hidden join table | Add `mappedBy = "fieldName"` |
+| `@ManyToOne` default fetch (EAGER) | Always loads parent | Add `fetch = FetchType.LAZY` |
+| `@Enumerated` without STRING | Stores ordinal, breaks on reorder | Use `@Enumerated(EnumType.STRING)` |
+| `List` in collections | Inefficient deletes | Use `Set` |
+| `@OneToOne` bidirectional | Non-owning side always eager | Use `@ManyToOne` or keep unidirectional |
+| Missing `@Transactional` on update | Changes never flush | Add `@Transactional` |
+| `entity.persist()` in service | Bypasses repository | Use `repository.persist(entity)` |
+
 ## Quick Reference
 
 ```
