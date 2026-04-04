@@ -1040,9 +1040,31 @@ Both tables get `created_at`, `updated_at`, `version` — but there's no `base_e
 
 ### @Convert — Custom Type Mapping
 
-Store a complex type as a simple column:
+**The problem**: You have a Java type (record, enum, value object) that Hibernate doesn't know how to store. Hibernate knows `String`, `Long`, `BigDecimal`, `LocalDate` — but not your custom `Money`, `Isbn`, or `Color`.
+
+**The solution**: A converter tells Hibernate "store this Java type as that DB type":
+
+```
+Java side          ←  Converter  →          DB side
+Money(19.99)       →  19.99                 DECIMAL
+Isbn("9780132350884") → "9780132350884"     VARCHAR
+Color.RED          →  "#FF0000"             VARCHAR
+```
+
+Without a converter, Hibernate throws: `Could not determine recommended JdbcType for Money`.
+
+**Basic example** — store a `Money` record as `DECIMAL`:
 
 ```java
+// The Java type
+public record Money(BigDecimal amount) {
+    public Money {
+        if (amount == null || amount.signum() < 0)
+            throw new IllegalArgumentException("Invalid amount: " + amount);
+    }
+}
+
+// The converter — bridges Java ↔ DB
 @Converter(autoApply = true)
 public class MoneyConverter implements AttributeConverter<Money, BigDecimal> {
     @Override
@@ -1056,15 +1078,75 @@ public class MoneyConverter implements AttributeConverter<Money, BigDecimal> {
     }
 }
 
-// Entity — just use Money directly
+// The entity — just use Money, converter handles the rest
 @Entity
 public class Payment extends PanacheEntity {
-    @Convert(converter = MoneyConverter.class)
     public Money amount;   // stored as DECIMAL in DB, Money in Java
 }
 ```
 
-With `autoApply = true`, every `Money` field in every entity uses this converter automatically — no `@Convert` needed on each field.
+**How `autoApply` works**:
+
+```java
+// autoApply = true → every Money field in every entity uses this converter
+@Converter(autoApply = true)
+public class MoneyConverter implements AttributeConverter<Money, BigDecimal> { }
+
+// No @Convert annotation needed on the entity
+public Money amount;      // ✅ converter kicks in automatically
+public Money fee;         // ✅ this one too
+public Money discount;    // ✅ and this one
+
+// autoApply = false (default) → you must annotate each field
+@Convert(converter = MoneyConverter.class)
+public Money amount;      // ✅ explicit
+public Money fee;         // ❌ no converter, Hibernate fails
+```
+
+**More examples**:
+
+```java
+// Store a Set<String> as comma-separated VARCHAR
+@Converter
+public class StringSetConverter implements AttributeConverter<Set<String>, String> {
+    @Override
+    public String convertToDatabaseColumn(Set<String> set) {
+        return set == null ? null : String.join(",", set);
+    }
+
+    @Override
+    public Set<String> convertToEntityAttribute(String value) {
+        return value == null ? Set.of() : Set.of(value.split(","));
+    }
+}
+
+// Store JSON as TEXT (with Jackson)
+@Converter
+public class JsonMetadataConverter implements AttributeConverter<Map<String, Object>, String> {
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    @Override
+    public String convertToDatabaseColumn(Map<String, Object> map) {
+        try { return mapper.writeValueAsString(map); }
+        catch (Exception e) { throw new RuntimeException(e); }
+    }
+
+    @Override
+    public Map<String, Object> convertToEntityAttribute(String json) {
+        try { return mapper.readValue(json, new TypeReference<>() {}); }
+        catch (Exception e) { throw new RuntimeException(e); }
+    }
+}
+```
+
+**When to use @Convert vs @Embeddable**:
+
+| | @Convert | @Embeddable |
+|---|---|---|
+| DB columns | 1 column | Multiple columns |
+| Use for | Single-value types (Money, Isbn) | Multi-field types (Address) |
+| Custom serialization | Yes — you control the format | No — Hibernate maps fields |
+| Queryable fields | Only the whole value | Each field individually |
 
 ### @SecondaryTable — One Entity, Two Tables
 
