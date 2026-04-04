@@ -1,11 +1,12 @@
 package dev.learning.domain.entity;
 
-import dev.learning.domain.LendingStatus;
+
+import dev.learning.domain.type.lending.LendStatus;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.time.LocalDate;
+
 
 @Entity
 @Table(name = "book_lending")
@@ -29,5 +30,5 @@ public class BookLending extends PanacheEntity {
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    public LendingStatus status;
+    public LendStatus status;
 }
