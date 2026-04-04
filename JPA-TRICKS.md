@@ -603,6 +603,153 @@ Configure batch size in `application.properties`:
 quarkus.hibernate-orm.jdbc.statement-batch-size=50
 ```
 
+### Pessimistic Locking — FOR UPDATE / NOWAIT / SKIP LOCKED
+
+#### FOR UPDATE — Lock and Wait
+
+Locks the row. Other transactions **wait** until the lock is released.
+
+```java
+public Optional<BookItem> findByIdForUpdate(Long id) {
+    return find("id = ?1", id)
+        .withLock(LockModeType.PESSIMISTIC_WRITE)
+        .firstResultOptional();
+}
+```
+
+```
+Thread A: SELECT ... FOR UPDATE → locks row
+Thread B: SELECT ... FOR UPDATE → WAITING... (blocked until A commits)
+```
+
+Safe but can block. Use when you need check + insert atomically.
+
+#### FOR UPDATE NOWAIT — Lock or Fail Immediately
+
+```java
+public Optional<BookItem> findByIdNowait(Long id) {
+    return find("id = ?1", id)
+        .withLock(LockModeType.PESSIMISTIC_WRITE)
+        .withHint("jakarta.persistence.lock.timeout", 0)  // NOWAIT
+        .firstResultOptional();
+}
+```
+
+```
+Thread A: SELECT ... FOR UPDATE → locks row
+Thread B: SELECT ... FOR UPDATE NOWAIT → ERROR immediately
+```
+
+Fast feedback — tell the client "try again later."
+
+#### FOR UPDATE SKIP LOCKED — The Job Queue Pattern
+
+Skips locked rows instead of waiting. Multiple workers grab different rows simultaneously.
+
+```java
+public Optional<EmailTask> grabNext() {
+    return find("status = ?1", Sort.by("id"), EmailStatus.PENDING)
+        .withLock(LockModeType.PESSIMISTIC_WRITE)
+        .withHint("jakarta.persistence.lock.timeout", -2)  // SKIP LOCKED
+        .firstResultOptional();
+}
+```
+
+How it works with 3 workers on an email queue:
+
+```
+email_queue
+├── id=1  PENDING
+├── id=2  PENDING
+├── id=3  PENDING
+├── id=4  PENDING
+
+Worker A                          Worker B                          Worker C
+────────                          ────────                          ────────
+SELECT ... LIMIT 1                
+  FOR UPDATE SKIP LOCKED          
+→ gets id=1, LOCKS it             
+                                  SELECT ... LIMIT 1
+                                    FOR UPDATE SKIP LOCKED
+                                  → id=1 locked, SKIP
+                                  → gets id=2, LOCKS it
+                                                                    SELECT ... LIMIT 1
+                                                                      FOR UPDATE SKIP LOCKED
+                                                                    → id=1 SKIP, id=2 SKIP
+                                                                    → gets id=3, LOCKS it
+
+UPDATE status='SENDING' id=1     UPDATE status='SENDING' id=2      UPDATE status='SENDING' id=3
+COMMIT                            COMMIT                            COMMIT
+```
+
+No duplicates. No waiting. Each worker grabs the next available row.
+
+Full service example:
+
+```java
+@ApplicationScoped
+public class EmailQueueService {
+
+    @Inject EmailQueueRepository emailQueue;
+    @Inject EmailSender sender;
+
+    @Transactional
+    public void processNext() {
+        emailQueue.grabNext().ifPresent(task -> {
+            task.status = EmailStatus.SENDING;
+            sender.send(task);
+            task.status = EmailStatus.SENT;
+            // lock held until commit — no other worker touches this row
+        });
+    }
+}
+```
+
+Turns a PostgreSQL table into a concurrent work queue — no Redis, no RabbitMQ needed.
+
+| Use case | Table | Workers grab |
+|---|---|---|
+| Email queue | `email_queue` | Next unsent email |
+| Payment processing | `payment_queue` | Next pending payment |
+| Book reservation | `book_item` | Next available copy |
+| Task scheduler | `scheduled_task` | Next due task |
+
+#### Locking Summary
+
+| Strategy | When locked | Use case |
+|---|---|---|
+| `FOR UPDATE` | Wait | Safe default, can block |
+| `FOR UPDATE NOWAIT` | Fail immediately | Fast feedback |
+| `FOR UPDATE SKIP LOCKED` | Skip to next row | Job queues, mailboxes |
+| Partial unique index | Fail at commit | "Only one active" constraints |
+
+### Partial Unique Index — DB-Level Business Rules
+
+For rules like "only one active lending per book item":
+
+```sql
+-- Flyway migration
+CREATE UNIQUE INDEX idx_one_active_lending_per_item
+    ON book_lending (book_item_id)
+    WHERE status = 'ACTIVE';
+```
+
+Can't express this with JPA annotations — it's a PostgreSQL feature. Goes in the migration.
+
+Two layers working together:
+
+```java
+// Service checks first — clean sealed result
+if (lendingRepository.isCurrentlyLent(bookItem)) {
+    return new BookNotAvailable(bookItem.id.toString());
+}
+
+// Partial index catches race conditions at commit
+// → PersistenceExceptionMapper returns 409
+```
+
+Service handles 99%. DB constraint handles the 1% race condition.
+
 ## Quick Reference
 
 ```
