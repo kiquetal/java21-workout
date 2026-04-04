@@ -1,4 +1,4 @@
-package dev.learning.domain.type;
+package dev.learning.domain.type.books;
 
 public record BookId(Long value) {
     public BookId {
