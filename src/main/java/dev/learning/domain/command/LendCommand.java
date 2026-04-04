@@ -1,7 +1,7 @@
 package dev.learning.domain.command;
 
-import dev.learning.domain.type.BookId;
-import dev.learning.domain.type.LendStatus;
+import dev.learning.domain.type.books.BookId;
+import dev.learning.domain.type.lending.LendStatus;
 import dev.learning.domain.type.MemberId;
 
 import java.time.Instant;
