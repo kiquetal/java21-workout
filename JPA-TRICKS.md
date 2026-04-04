@@ -848,6 +848,355 @@ if (lendingRepository.isCurrentlyLent(bookItem)) {
 
 Service handles 99%. DB constraint handles the 1% race condition.
 
+---
+
+## Production-Grade Annotations
+
+### @Embeddable / @Embedded — Value Objects in the Same Table
+
+Instead of a separate table for an address:
+
+```java
+@Embeddable
+public class Address {
+    public String street;
+    public String city;
+    public String zipCode;
+    public String country;
+}
+
+@Entity
+public class Member extends PanacheEntity {
+    public String name;
+
+    @Embedded
+    public Address address;   // stored in member table, not a separate table
+}
+```
+
+Database:
+
+```sql
+member
+├── id
+├── name
+├── street      ← from Address
+├── city        ← from Address
+├── zip_code    ← from Address
+├── country     ← from Address
+```
+
+Override column names if needed:
+
+```java
+@Embedded
+@AttributeOverrides({
+    @AttributeOverride(name = "street", column = @Column(name = "home_street")),
+    @AttributeOverride(name = "city", column = @Column(name = "home_city"))
+})
+public Address homeAddress;
+
+@Embedded
+@AttributeOverrides({
+    @AttributeOverride(name = "street", column = @Column(name = "work_street")),
+    @AttributeOverride(name = "city", column = @Column(name = "work_city"))
+})
+public Address workAddress;
+```
+
+Two addresses in the same table, different column names.
+
+### @ElementCollection — List of Values Without a Separate Entity
+
+```java
+@Entity
+public class Book extends PanacheEntity {
+    public String title;
+
+    @ElementCollection
+    @CollectionTable(name = "book_tags", joinColumns = @JoinColumn(name = "book_id"))
+    @Column(name = "tag")
+    public Set<String> tags;   // stored in book_tags table, no Tag entity needed
+}
+```
+
+Database:
+
+```sql
+book_tags
+├── book_id → references book(id)
+└── tag     ← just a string column
+```
+
+Good for simple values (tags, roles, phone numbers). If the value needs its own ID or relationships, make it an entity instead.
+
+### @Inheritance — Three Strategies
+
+When entities share fields (e.g., `Payment` → `CreditCardPayment`, `BankTransferPayment`):
+
+#### SINGLE_TABLE (default, usually best)
+
+```java
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "payment_type")
+public abstract class Payment extends PanacheEntity {
+    public BigDecimal amount;
+    public LocalDate paidAt;
+}
+
+@Entity
+@DiscriminatorValue("CREDIT_CARD")
+public class CreditCardPayment extends Payment {
+    public String cardLastFour;
+}
+
+@Entity
+@DiscriminatorValue("BANK_TRANSFER")
+public class BankTransferPayment extends Payment {
+    public String iban;
+}
+```
+
+One table, all columns, discriminator column tells Hibernate which type:
+
+```sql
+payment
+├── id
+├── payment_type    ← "CREDIT_CARD" or "BANK_TRANSFER"
+├── amount
+├── paid_at
+├── card_last_four  ← null for bank transfers
+├── iban            ← null for credit cards
+```
+
+Fast queries (no joins), but nullable columns for type-specific fields.
+
+#### JOINED — One Table Per Class
+
+```java
+@Inheritance(strategy = InheritanceType.JOINED)
+```
+
+```sql
+payment (id, amount, paid_at)
+credit_card_payment (id → payment.id, card_last_four)
+bank_transfer_payment (id → payment.id, iban)
+```
+
+Clean schema, no nulls. But every query needs a JOIN.
+
+#### TABLE_PER_CLASS — Separate Tables, No Shared Table
+
+```java
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+```
+
+```sql
+credit_card_payment (id, amount, paid_at, card_last_four)
+bank_transfer_payment (id, amount, paid_at, iban)
+```
+
+No joins, no nulls. But polymorphic queries (`SELECT * FROM Payment`) use UNION ALL — slow.
+
+| Strategy | Tables | Nulls | Queries | Best for |
+|---|---|---|---|---|
+| `SINGLE_TABLE` | 1 | Yes | Fast | Few type-specific fields |
+| `JOINED` | N+1 | No | JOINs | Many type-specific fields |
+| `TABLE_PER_CLASS` | N | No | UNION | Rarely query polymorphically |
+
+### @MappedSuperclass — Share Fields Without Inheritance
+
+When entities share fields but are NOT related polymorphically:
+
+```java
+@MappedSuperclass
+public abstract class BaseEntity extends PanacheEntity {
+    @CreationTimestamp
+    @Column(updatable = false)
+    public LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    public LocalDateTime updatedAt;
+
+    @Version
+    public int version;
+}
+
+@Entity
+public class Book extends BaseEntity {
+    public String title;
+    public String isbn;
+}
+
+@Entity
+public class Member extends BaseEntity {
+    public String name;
+    public String email;
+}
+```
+
+Both tables get `created_at`, `updated_at`, `version` — but there's no `base_entity` table. It's just code reuse, not a DB relationship.
+
+### @Convert — Custom Type Mapping
+
+Store a complex type as a simple column:
+
+```java
+@Converter(autoApply = true)
+public class MoneyConverter implements AttributeConverter<Money, BigDecimal> {
+    @Override
+    public BigDecimal convertToDatabaseColumn(Money money) {
+        return money == null ? null : money.amount();
+    }
+
+    @Override
+    public Money convertToEntityAttribute(BigDecimal value) {
+        return value == null ? null : new Money(value);
+    }
+}
+
+// Entity — just use Money directly
+@Entity
+public class Payment extends PanacheEntity {
+    @Convert(converter = MoneyConverter.class)
+    public Money amount;   // stored as DECIMAL in DB, Money in Java
+}
+```
+
+With `autoApply = true`, every `Money` field in every entity uses this converter automatically — no `@Convert` needed on each field.
+
+### @SecondaryTable — One Entity, Two Tables
+
+```java
+@Entity
+@Table(name = "member")
+@SecondaryTable(name = "member_details", pkJoinColumns = @PrimaryKeyJoinColumn(name = "member_id"))
+public class Member extends PanacheEntity {
+    public String name;
+    public String email;
+
+    @Column(table = "member_details")
+    public String bio;
+
+    @Column(table = "member_details")
+    public String avatarUrl;
+}
+```
+
+```sql
+member (id, name, email)
+member_details (member_id → member.id, bio, avatar_url)
+```
+
+One entity, two tables. Useful when you have a wide table and want to split hot columns from cold columns. Hibernate JOINs them transparently.
+
+### @Index — Create Indexes From Entities
+
+```java
+@Entity
+@Table(
+    name = "book_lending",
+    indexes = {
+        @Index(name = "idx_lending_member", columnList = "member_id"),
+        @Index(name = "idx_lending_status", columnList = "status"),
+        @Index(name = "idx_lending_member_status", columnList = "member_id, status")
+    }
+)
+public class BookLending extends PanacheEntity {
+    @ManyToOne public Member member;
+    @Enumerated(EnumType.STRING) public LendingStatus status;
+}
+```
+
+Hibernate creates these indexes during schema generation. Name them explicitly — you'll see them in query plans and error messages.
+
+### @ColumnDefault — DB Default Values
+
+```java
+@Entity
+public class BookLending extends PanacheEntity {
+    @ColumnDefault("'ACTIVE'")
+    @Enumerated(EnumType.STRING)
+    public LendingStatus status;
+
+    @ColumnDefault("CURRENT_DATE")
+    public LocalDate borrowedAt;
+}
+```
+
+Generates:
+
+```sql
+status VARCHAR(20) DEFAULT 'ACTIVE'
+borrowed_at DATE DEFAULT CURRENT_DATE
+```
+
+Only affects DDL. Combine with `@DynamicInsert` so Hibernate omits these columns on INSERT and lets the DB default kick in.
+
+### @Lob — Large Objects
+
+```java
+@Entity
+public class BookReview extends PanacheEntity {
+    @ManyToOne public Book book;
+
+    @Lob
+    public String content;   // TEXT in PostgreSQL (no length limit)
+
+    @Lob
+    public byte[] attachment;  // BYTEA in PostgreSQL
+}
+```
+
+### Named Queries — Precompiled, Reusable
+
+```java
+@Entity
+@NamedQuery(name = "Book.findByAuthor",
+    query = "SELECT b FROM Book b WHERE b.author = :author ORDER BY b.title")
+@NamedQuery(name = "Book.countByAuthor",
+    query = "SELECT COUNT(b) FROM Book b WHERE b.author = :author")
+public class Book extends PanacheEntity {
+    public String title;
+    public String author;
+}
+
+// In repository
+public List<Book> findByAuthor(String author) {
+    return find("#Book.findByAuthor", Parameters.with("author", author)).list();
+}
+```
+
+Named queries are validated at startup — typos in field names fail fast instead of at runtime.
+
+### Entity Graphs — Control What Gets Loaded
+
+```java
+@Entity
+@NamedEntityGraph(
+    name = "BookLending.withBookAndMember",
+    attributeNodes = {
+        @NamedAttributeNode("book"),
+        @NamedAttributeNode("member")
+    }
+)
+public class BookLending extends PanacheEntity {
+    @ManyToOne(fetch = FetchType.LAZY) public Book book;
+    @ManyToOne(fetch = FetchType.LAZY) public Member member;
+}
+
+// In repository — load lending WITH book and member in one query
+public Optional<BookLending> findByIdWithDetails(Long id) {
+    return find("id = ?1", id)
+        .withHint("jakarta.persistence.fetchgraph", 
+            entityManager.getEntityGraph("BookLending.withBookAndMember"))
+        .firstResultOptional();
+}
+```
+
+Entity graphs override fetch types per query. Keep entities lazy by default, eagerly load only when needed via graphs.
+
 ## Quick Reference
 
 ```
