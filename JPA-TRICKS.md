@@ -248,6 +248,104 @@ public LocalDate generatedField;
 public String email;
 ```
 
+### What @Column Actually Does
+
+`@Column` does NOT validate your Java code. It only affects DDL generation and documents the mapping:
+
+```java
+@Column(nullable = false)
+public String title;
+```
+
+This tells Hibernate: "when generating the schema, add `NOT NULL` to this column." It does NOT prevent you from setting `title = null` in Java — that will fail at the DB level, not in your code.
+
+| @Column property | Affects DDL? | Validates Java? | What it does |
+|---|---|---|---|
+| `nullable = false` | Yes → `NOT NULL` | No | DB rejects null |
+| `unique = true` | Yes → `UNIQUE` constraint | No | DB rejects duplicates |
+| `length = 13` | Yes → `VARCHAR(13)` | No | DB truncates/rejects |
+| `updatable = false` | No DDL | Yes (Hibernate) | Hibernate skips column in UPDATE |
+| `insertable = false` | No DDL | Yes (Hibernate) | Hibernate skips column in INSERT |
+
+For Java-side validation, use Bean Validation (`@NotNull`, `@Size`) on your DTOs.
+
+### @Column(unique = true) vs @Table(uniqueConstraints)
+
+`@Column(unique = true)` creates a constraint with an auto-generated ugly name:
+
+```java
+@Column(unique = true)
+public String isbn;
+// → constraint name: ukbi5lx9jtv1f52idrmc0ck8ysx (random hash)
+```
+
+When Hibernate's `update` strategy runs on a fresh DB, it tries to drop this constraint first (in case it changed), then recreate it. On a new DB the drop fails → you see the warning:
+
+```
+constraint "ukbi5lx9jtv1f52idrmc0ck8ysx" of relation "book" does not exist, skipping
+```
+
+This is harmless — the constraint gets created correctly. The warning disappears on subsequent restarts because the constraint exists.
+
+To get readable constraint names, use `@Table` instead:
+
+```java
+// ❌ Auto-generated name — hard to debug
+@Entity
+public class Book extends PanacheEntity {
+    @Column(unique = true, nullable = false, length = 13)
+    public String isbn;
+}
+// constraint name: ukbi5lx9jtv1f52idrmc0ck8ysx
+
+// ✅ Named constraint — shows up clearly in error messages
+@Entity
+@Table(uniqueConstraints = @UniqueConstraint(
+    name = "uk_book_isbn",
+    columnNames = "isbn"
+))
+public class Book extends PanacheEntity {
+    @Column(nullable = false, length = 13)
+    public String isbn;   // no unique=true here — @Table handles it
+}
+// constraint name: uk_book_isbn
+```
+
+Now when your `PersistenceExceptionMapper` catches a constraint violation, you see `uk_book_isbn` instead of random characters.
+
+### Schema Management Strategies
+
+```properties
+# Dev — Hibernate adds tables/columns as you create entities, never drops
+%dev.quarkus.hibernate-orm.schema-management.strategy=update
+
+# Prod — Flyway owns the schema, Hibernate doesn't touch it
+%prod.quarkus.hibernate-orm.schema-management.strategy=none
+```
+
+| Strategy | What it does | When to use |
+|---|---|---|
+| `none` | Hibernate doesn't touch the schema | Production (Flyway owns it) |
+| `update` | Adds new tables/columns, never drops | Dev — incremental, keeps data |
+| `drop-and-create` | Drops everything, recreates from entities | Dev — clean slate every restart |
+| `validate` | Checks schema matches entities, fails if not | CI — catch mismatches |
+
+With `update`, the workflow is:
+
+```
+1. Write entity → Hibernate creates table
+2. Add field   → Hibernate adds column
+3. Add @Column(unique=true) → Hibernate adds constraint
+4. Restart     → Hibernate checks what exists, only adds what's missing
+```
+
+When ready for production:
+```
+5. Dev UI → Flyway → Create Initial Migration (exports the DDL)
+6. Switch to strategy=none
+7. Flyway owns the schema from now on
+```
+
 ## @Table — Customize Table Name
 
 ```java
