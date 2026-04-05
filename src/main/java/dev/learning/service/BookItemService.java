@@ -4,16 +4,15 @@ import dev.learning.domain.entity.BookItem;
 import dev.learning.domain.result.book_item.BookItemResult;
 import dev.learning.domain.type.book_item.BookId;
 import dev.learning.domain.type.book_item.BookItemInfo;
+import dev.learning.domain.type.books.Isbn;
 import dev.learning.dto.BookItemRequestUpdate;
 import dev.learning.repository.BookItemRepository;
 import dev.learning.repository.BookRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.hibernate.annotations.ColumnTransformers;
 
 import static dev.learning.domain.type.book_item.BookItemStatus.*;
-import static jdk.internal.jshell.tool.Selector.FormatAction.ADDED;
 
 @ApplicationScoped
 public class
@@ -36,7 +35,7 @@ BookItemService
         bookItem.setBook(book);
         bookItem.setStatus(AVAILABLE);
         bookItemRepository.persist(bookItem);
-        return new BookItemResult.BookItemAdded(new BookItemInfo(new BookId(bookItem.id), bookItem.getBook().isbn,bookItem.getStatus(),bookItem.id));
+        return new BookItemResult.BookItemAdded(new BookItemInfo(new BookId(bookItem.id), new Isbn(bookItem.getBook().isbn) ,bookItem.getStatus(),bookItem.id));
     }
 
     @Transactional
