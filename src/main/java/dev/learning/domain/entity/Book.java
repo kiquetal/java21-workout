@@ -3,8 +3,10 @@ package dev.learning.domain.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
 
 import java.time.Instant;
+import java.util.Set;
 
 @Entity
 public class Book extends PanacheEntity {
@@ -20,4 +22,7 @@ public class Book extends PanacheEntity {
     public String publisher;
 
     public Instant publishDate;
+
+    @OneToMany(mappedBy = "book")
+    Set<BookItem> bookItems;
 }

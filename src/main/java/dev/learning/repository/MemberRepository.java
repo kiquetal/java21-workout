@@ -16,4 +16,5 @@ public class MemberRepository implements PanacheRepository<Member> {
     public boolean existsByEmail(Email email) {
         return count("email", email.value()) > 0;
     }
+
 }
