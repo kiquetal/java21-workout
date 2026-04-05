@@ -1,4 +1,4 @@
-package dev.learning.domain.type;
+package dev.learning.domain.type.member;
 
 public record MemberId(Long value) {
     public MemberId {

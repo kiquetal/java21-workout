@@ -1,6 +1,6 @@
 package dev.learning.domain.result.lending;
 
-import dev.learning.domain.type.MemberId;
+import dev.learning.domain.type.member.MemberId;
 import dev.learning.domain.type.lending.BookLendingResult;
 
 import java.util.List;

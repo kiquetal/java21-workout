@@ -2,7 +2,7 @@ package dev.learning.repository;
 
 import dev.learning.domain.entity.Member;
 import dev.learning.domain.type.Email;
-import dev.learning.domain.type.MemberId;
+import dev.learning.domain.type.member.MemberId;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Optional;
