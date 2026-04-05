@@ -1,8 +1,8 @@
 package dev.learning.resource;
 
 import dev.learning.domain.command.CreateMemberCommand;
-import dev.learning.domain.result.member.CreateMemberResult.EmailAlreadyExists;
-import dev.learning.domain.result.member.CreateMemberResult.Success;
+import dev.learning.domain.result.member.MemberResult.EmailAlreadyExists;
+import dev.learning.domain.result.member.MemberResult.Success;
 import dev.learning.domain.type.Email;
 import dev.learning.dto.ErrorResponse;
 import dev.learning.dto.MemberRequest;

@@ -2,9 +2,9 @@ package dev.learning.service;
 
 import dev.learning.domain.command.CreateMemberCommand;
 import dev.learning.domain.entity.Member;
-import dev.learning.domain.result.member.CreateMemberResult;
-import dev.learning.domain.result.member.CreateMemberResult.EmailAlreadyExists;
-import dev.learning.domain.result.member.CreateMemberResult.Success;
+import dev.learning.domain.result.member.MemberResult;
+import dev.learning.domain.result.member.MemberResult.EmailAlreadyExists;
+import dev.learning.domain.result.member.MemberResult.Success;
 import dev.learning.repository.MemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,7 +17,7 @@ public class MemberService {
     MemberRepository memberRepository;
 
     @Transactional
-    public CreateMemberResult create(CreateMemberCommand command) {
+    public MemberResult create(CreateMemberCommand command) {
         if (memberRepository.existsByEmail(command.email())) {
             return new EmailAlreadyExists(command.email().value());
         }
