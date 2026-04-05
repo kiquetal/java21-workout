@@ -15,9 +15,7 @@ import jakarta.transaction.Transactional;
 import static dev.learning.domain.type.book_item.BookItemStatus.*;
 
 @ApplicationScoped
-public class
-BookItemService
-{
+public class BookItemService {
     @Inject
     BookItemRepository bookItemRepository;
 
@@ -25,30 +23,25 @@ BookItemService
     BookRepository bookRepository;
 
     @Transactional
-    public BookItemResult createBookItem(BookItemInfo bookItemInfo)
-    {
+    public BookItemResult createBookItem(BookItemInfo bookItemInfo) {
         var book = bookRepository.findById(bookItemInfo.bookId().value());
         if (book == null) {
-            return new BookItemResult.BookUnavailable(new BookId(bookItemInfo.bookId().value()),"Book could not be found.");
+            return new BookItemResult.BookUnavailable(bookItemInfo.bookId(), "Book could not be found.");
         }
-        BookItem bookItem = new BookItem();
-        bookItem.setBook(book);
-        bookItem.setStatus(AVAILABLE);
+        var bookItem = new BookItem();
+        bookItem.book = book;
+        bookItem.status = AVAILABLE;
         bookItemRepository.persist(bookItem);
-        return new BookItemResult.BookItemAdded(new BookItemInfo(new BookId(bookItem.id), new Isbn(bookItem.getBook().isbn) ,bookItem.getStatus(),bookItem.id));
+        return new BookItemResult.BookItemAdded(new BookItemInfo(new BookId(bookItem.id), new Isbn(bookItem.book.isbn), bookItem.status, bookItem.id));
     }
 
     @Transactional
-    public BookItemResult updateBookItem(BookItemRequestUpdate bookItem)
-    {
-
-        var book = bookItemRepository.findById(bookItem.bookItemId());
-        if (book == null) {
+    public BookItemResult updateBookItem(BookItemRequestUpdate bookItem) {
+        var item = bookItemRepository.findById(bookItem.bookItemId());
+        if (item == null) {
             return new BookItemResult.BookUnavailable(new BookId(bookItem.bookItemId()), "BookItem could not be found.");
         }
-
-        var status = bookItem.status() == null ? book.getStatus() : bookItem.status();
-        book.setStatus(status);
-        return new BookItemResult.BookItemUpdated(new BookItemInfo(new BookId(bookItem.bookItemId()), null, UNAVAILABLE, bookItem.bookItemId()));
+        item.status = bookItem.status() == null ? item.status : bookItem.status();
+        return new BookItemResult.BookItemUpdated(new BookItemInfo(new BookId(bookItem.bookItemId()), null, item.status, bookItem.bookItemId()));
     }
 }

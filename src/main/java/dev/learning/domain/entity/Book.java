@@ -24,5 +24,5 @@ public class Book extends PanacheEntity {
     public Instant publishDate;
 
     @OneToMany(mappedBy = "book")
-    Set<BookItem> bookItems;
+    public Set<BookItem> bookItems;
 }

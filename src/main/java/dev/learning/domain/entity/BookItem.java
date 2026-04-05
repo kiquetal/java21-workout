@@ -7,66 +7,19 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-public class BookItem extends PanacheEntity
-{
+public class BookItem extends PanacheEntity {
     @ManyToOne
-    @JoinColumn(name="book_id")
-    public Book book;;
+    @JoinColumn(name = "book_id")
+    public Book book;
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    BookItemStatus status;
-    String notes;
+    public BookItemStatus status;
 
-    public String getNotes()
-    {
-        return notes;
-    }
+    public String notes;
 
-    public void setNotes(String notes)
-    {
-        this.notes = notes;
-    }
+    @Column(updatable = false)
+    public Instant creationDate;
 
-    public Instant getCreationDate()
-    {
-        return creationDate;
-    }
-
-    public void setCreationDate(Instant creationDate)
-    {
-        this.creationDate = creationDate;
-    }
-
-    Instant creationDate;
-    Instant updateDate;
-
-    public Instant getUpdateDate()
-    {
-        return updateDate;
-    }
-
-    public void setUpdateDate(Instant updateDate)
-    {
-        this.updateDate = updateDate;
-    }
-
-    public BookItemStatus getStatus()
-    {
-        return status;
-    }
-
-    public void setStatus(BookItemStatus status)
-    {
-        this.status = status;
-    }
-
-    public Book getBook()
-    {
-        return book;
-    }
-
-    public void setBook(Book book)
-    {
-        this.book = book;
-    }
+    public Instant updateDate;
 }
