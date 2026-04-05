@@ -2,7 +2,6 @@ package dev.learning.resource;
 
 import dev.learning.domain.command.CreateMemberCommand;
 import dev.learning.domain.result.member.MemberResult.EmailAlreadyExists;
-import dev.learning.domain.result.member.MemberResult.Success;
 import dev.learning.domain.type.Email;
 import dev.learning.dto.ErrorResponse;
 import dev.learning.dto.MemberRequest;
@@ -29,29 +28,9 @@ public class MemberResource {
     MemberService memberService;
 
     @POST
-    public Response create(@Valid MemberRequest request) {
-        LOG.tracev("TRACE — raw request: name={0}, email={1}", request.name(), request.email());
-        LOG.debugv("DEBUG — parsing DTO to domain types");
-        LOG.infov("INFO — creating member: {0}", request.name());
-        LOG.warnv("WARN — demo warning for member: {0}", request.name());
-        LOG.errorv("ERROR — demo error for member: {0}", request.name());
-        // DTO → Domain (parsing boundary)
-        var command = new CreateMemberCommand(
-            request.name(),
-            new Email(request.email())   // raw string → validated Email
-        );
+    public Response create(@Valid MemberRequest request)
+    {
 
-        // Domain → Result
-        var result = memberService.create(command);
-
-        // Result → DTO (response)
-        return switch (result) {
-            case Success(var member) -> Response.status(201)
-                .entity(new MemberResponse(member.id, member.name, member.email))
-                .build();
-            case EmailAlreadyExists(var email) -> Response.status(409)
-                .entity(new ErrorResponse("Email %s already registered".formatted(email)))
-                .build();
-        };
+        return Response.ok().build();
     }
 }
