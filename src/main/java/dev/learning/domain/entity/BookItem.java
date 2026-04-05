@@ -1,5 +1,6 @@
 package dev.learning.domain.entity;
 
+import dev.learning.domain.type.book_item.BookItemStatus;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 

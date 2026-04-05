@@ -22,7 +22,6 @@ public class LendingRepository implements PanacheRepository<BookLending> {
 
     public boolean hasOverdueBook(MemberId memberId)
     {
-
         return count("member.id = ?1 and status =?2 and dueDate < ?3", memberId, LendStatus.LENT, Instant.now()) > 0;
     }
 
