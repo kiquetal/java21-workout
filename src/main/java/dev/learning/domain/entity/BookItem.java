@@ -9,8 +9,7 @@ public class BookItem extends PanacheEntity
 {
     @ManyToOne
     @JoinColumn(name="book_item_id")
-    Book book;
-    String isbn;
+    Book book;;
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     BookItemStatus status;
