@@ -4,5 +4,6 @@ public enum LendStatus
 {
     AVAILABLE,
     LENT,
+    RETURNED,
     LENT_EXPIRED,
 }
