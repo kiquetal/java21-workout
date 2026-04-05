@@ -13,7 +13,6 @@ public class MemberRepository implements PanacheRepository<Member> {
     public Optional<Member> findByMemberId(MemberId memberId) {
         return findByIdOptional(memberId.value());
     }
-
     public boolean existsByEmail(Email email) {
         return count("email", email.value()) > 0;
     }

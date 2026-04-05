@@ -1,9 +1,8 @@
 package dev.learning.domain.entity;
 
+import dev.learning.domain.type.member.MemberStatus;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 
 import java.util.Set;
 
@@ -15,4 +14,8 @@ public class Member extends PanacheEntity {
     public String email;
     @Column(name="address")
     public String address;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    public MemberStatus status;
 }
