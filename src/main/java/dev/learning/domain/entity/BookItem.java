@@ -15,6 +15,17 @@ public class BookItem extends PanacheEntity
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     BookItemStatus status;
+    String notes;
+
+    public String getNotes()
+    {
+        return notes;
+    }
+
+    public void setNotes(String notes)
+    {
+        this.notes = notes;
+    }
 
     public Instant getCreationDate()
     {
