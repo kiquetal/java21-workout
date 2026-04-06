@@ -1,11 +1,6 @@
 package dev.learning.resource;
 
-import dev.learning.domain.command.CreateMemberCommand;
-import dev.learning.domain.result.member.MemberResult.EmailAlreadyExists;
-import dev.learning.domain.type.Email;
-import dev.learning.dto.ErrorResponse;
 import dev.learning.dto.MemberRequest;
-import dev.learning.dto.MemberResponse;
 import dev.learning.service.MemberService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
