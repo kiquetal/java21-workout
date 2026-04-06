@@ -16,7 +16,6 @@ public class BookLending extends PanacheEntity {
     public BookItem bookItem;
 
     @ManyToOne(optional = false)
-
     public Member member;
 
     @Column(name = "borrowed_at", nullable = false)
