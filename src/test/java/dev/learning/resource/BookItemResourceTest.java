@@ -17,7 +17,7 @@ class BookItemResourceTest {
                 {"bookId": "not-a-number", "notes": "test"}
                 """)
         .when()
-            .post("/chiron/api/book-items")
+            .post("/api/book-items")
         .then()
             .statusCode(400)
             .body("message", containsString("bookId"));
@@ -31,7 +31,7 @@ class BookItemResourceTest {
                 {"notes": "test"}
                 """)
         .when()
-            .post("/chiron/api/book-items")
+            .post("/api/book-items")
         .then()
             .statusCode(400);
     }
@@ -44,7 +44,7 @@ class BookItemResourceTest {
                 {"bookId": 99999, "notes": "test"}
                 """)
         .when()
-            .post("/chiron/api/book-items")
+            .post("/api/book-items")
         .then()
             .statusCode(anyOf(is(404), is(409)));
     }
@@ -57,7 +57,7 @@ class BookItemResourceTest {
                 {"bookItemId": 1, "status": "INVALID_STATUS"}
                 """)
         .when()
-            .put("/chiron/api/book-items")
+            .put("/api/book-items")
         .then()
             .statusCode(400)
             .body("message", containsString("status"));
