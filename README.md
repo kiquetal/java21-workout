@@ -327,6 +327,70 @@ memberRepository.findByMemberId(...)    // loads from DB — Hibernate "manages"
 
 "Managed" = Hibernate loaded it and is watching it. Change a field → Hibernate detects the diff → flushes the UPDATE at commit. No explicit save needed.
 
+### 13. Test Configuration — Separate `application.properties`
+
+Quarkus looks for `src/test/resources/application.properties` and uses it **instead of** the main one during tests. This lets you isolate test settings without polluting your dev/prod config.
+
+**Why bother?** Without it, your tests inherit whatever's in the main config. If you enable Flyway, switch Hibernate to `validate`, or change logging in main — your tests break. A separate test config keeps them independent.
+
+**File layout:**
+
+```
+src/main/resources/application.properties    ← dev + prod
+src/test/resources/application.properties    ← tests only (overrides main)
+```
+
+**What to put in the test config:**
+
+```properties
+# ── Dev Services (test container) ──
+# Quarkus auto-starts a PostgreSQL container for tests.
+# These settings control THAT container, not your real DB.
+quarkus.datasource.db-kind=postgresql
+quarkus.devservices.enabled=true
+quarkus.datasource.devservices.image-name=postgres:17       # pin version
+quarkus.datasource.devservices.db-name=book_lending_test    # distinct name
+quarkus.datasource.devservices.username=test
+quarkus.datasource.devservices.password=test
+
+# ── Hibernate ──
+# drop-and-create = clean schema every test run
+quarkus.hibernate-orm.schema-management.strategy=drop-and-create
+quarkus.hibernate-orm.log.sql=true    # see queries in test output
+
+# ── Flyway ──
+# Off — Hibernate manages schema via drop-and-create
+quarkus.flyway.migrate-at-start=false
+```
+
+**Key differences from main config:**
+
+| Setting | Main (dev/prod) | Test |
+|---|---|---|
+| Hibernate schema | `%dev.drop-and-create` / `%prod.none` | `drop-and-create` (always clean) |
+| Flyway | Depends on environment | Off — Hibernate owns the schema |
+| Dev Services image | Default (latest) | Pinned (`postgres:17`) for reproducibility |
+| DB name | Default | `book_lending_test` — distinct from dev |
+| SQL logging | Off | On — useful for debugging test failures |
+
+**How it works at runtime:**
+
+```
+./mvnw quarkus:dev  → src/main/resources/application.properties (%dev profile)
+./mvnw test         → src/test/resources/application.properties (overrides main)
+```
+
+Both spin up a Testcontainers PostgreSQL via Dev Services, but with independent settings. The test container is ephemeral — created before tests, destroyed after.
+
+**Test types and what they need:**
+
+| Test type | Needs `@QuarkusTest`? | Needs Dev Services? | Example |
+|---|---|---|---|
+| Pure domain (value types, sealed results) | No | No | `ValueTypeTest`, `SealedResultTest` |
+| Integration (REST endpoints) | Yes | Yes (auto) | `BookItemResourceTest` |
+
+Pure domain tests don't touch the container at all — they run in milliseconds. Only `@QuarkusTest` classes trigger Dev Services and the full Quarkus lifecycle.
+
 ## Tech Stack
 
 - Java 21+
