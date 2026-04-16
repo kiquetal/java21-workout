@@ -327,7 +327,101 @@ memberRepository.findByMemberId(...)    // loads from DB — Hibernate "manages"
 
 "Managed" = Hibernate loaded it and is watching it. Change a field → Hibernate detects the diff → flushes the UPDATE at commit. No explicit save needed.
 
-### 13. Test Configuration — Separate `application.properties`
+### 13. `@Transactional` Belongs on the Service, Not the Resource
+
+The resource is a translator (DTO ↔ HTTP). The service owns the business operation. The transaction wraps the business operation — so `@Transactional` goes on the service.
+
+```
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        REQUEST FLOW                             │
+  │                                                                 │
+  │   Client                                                        │
+  │     │                                                           │
+  │     ▼                                                           │
+  │   ┌──────────────────────────────────┐                          │
+  │   │  Resource (JAX-RS)               │  No @Transactional       │
+  │   │  • Receives JSON                 │  • Parses DTO → Command  │
+  │   │  • Returns HTTP Response         │  • Pattern matches result│
+  │   └──────────────┬───────────────────┘                          │
+  │                  │ LendCommand (validated domain types)          │
+  │                  ▼                                               │
+  │   ┌──────────────────────────────────┐                          │
+  │   │  Service                         │  @Transactional          │
+  │   │  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │                          │
+  │   │    TX BEGIN                      │                          │
+  │   │  │ • repo.find() → Entity  ◄────┼── Hibernate manages it   │
+  │   │    • Business rules              │                          │
+  │   │  │ • repo.persist() if new       │                          │
+  │   │    • Entity → Record (convert)   │                          │
+  │   │  │ TX COMMIT (auto-flush)        │                          │
+  │   │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │                          │
+  │   └──────────────┬───────────────────┘                          │
+  │                  │ LendingResult (sealed, contains records)      │
+  │                  ▼                                               │
+  │   ┌──────────────────────────────────┐                          │
+  │   │  Resource (pattern match)        │                          │
+  │   │  Success → 200 OK               │                          │
+  │   │  NotFound → 404                  │                          │
+  │   │  AlreadyLent → 409              │                          │
+  │   └──────────────────────────────────┘                          │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+**Why not on the resource?**
+
+```
+  ❌ @Transactional on Resource          ✅ @Transactional on Service
+  ┌─────────────────────────┐            ┌─────────────────────────┐
+  │ Resource                │            │ Resource                │
+  │ ┌─ TX ────────────────┐ │            │ (no TX)                 │
+  │ │ parse DTO           │ │            │  parse DTO              │
+  │ │ call service        │ │            │  call service ──┐       │
+  │ │ build Response ◄──┐ │ │            │  match result   │       │
+  │ │ (entity still      │ │ │            │  build Response │       │
+  │ │  alive here —      │ │ │            └─────────────────┘       │
+  │ │  lazy load risk!)  │ │ │                              │       │
+  │ └────────────────────┘ │            ┌───────────────────▼─────┐
+  │  TX open too long      │            │ Service                 │
+  │  Entity leaks to HTTP  │            │ ┌─ TX ───────────────┐  │
+  └─────────────────────────┘            │ │ entities live HERE │  │
+                                         │ │ convert → records  │  │
+                                         │ └───────────────────┘  │
+                                         │  records escape (safe) │
+                                         └────────────────────────┘
+```
+
+The problems with `@Transactional` on the resource:
+- Transaction stays open while building the HTTP response — longer than needed
+- Entities leak into the resource — tempts you to skip the record conversion
+- `LazyInitializationException` risk if you access unloaded relations in the response builder
+- Mixes concerns — the resource shouldn't know a database exists
+
+**The rule**: entities live and die inside the `@Transactional` service method. What comes out is an immutable record inside a sealed result. The resource only sees records, never entities.
+
+```java
+// ✅ Service owns the transaction
+@ApplicationScoped
+public class LendingService {
+
+    @Inject LendingRepository lendingRepository;
+    @Inject MemberRepository memberRepository;
+
+    @Transactional
+    public LendingResult lend(LendCommand command) {
+        var member = memberRepository.findByMemberId(command.memberId())
+            .orElse(null);
+        if (member == null)
+            return new LendingResult.MemberNotFound(command.memberId());
+
+        // ... business rules, persist, convert entity → record ...
+        return new LendingResult.Success(/* BookLendingResult record */);
+    }
+}
+```
+
+**F# parallel**: In F#, your workflow function is the unit of work. You'd wrap it in a `transaction { }` computation expression or let the infrastructure handle it. The HTTP handler just calls the workflow and maps the result. Same idea — the boundary between "database-aware" and "HTTP-aware" is the service method.
+
+### 14. Test Configuration — Separate `application.properties`
 
 Quarkus looks for `src/test/resources/application.properties` and uses it **instead of** the main one during tests. This lets you isolate test settings without polluting your dev/prod config.
 
