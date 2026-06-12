@@ -12,6 +12,9 @@ public sealed interface Either<L, R>
     {
     }
 
+    static <L, R> Either<L, R> left(L value) { return new Left<>(value); }
+    static <L, R> Either<L, R> right(R value) { return new Right<>(value); }
+
     default <U> Either<L,U> map (Function<R,U> f) {
 
         switch (this) {
