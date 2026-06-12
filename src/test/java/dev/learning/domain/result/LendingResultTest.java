@@ -2,7 +2,7 @@ package dev.learning.domain.result;
 
 import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.book_item.BookId;
-import dev.learning.domain.type.lending.BookLendingResult;
+import dev.learning.domain.type.lending.LendingDetail;
 import dev.learning.domain.type.member.MemberId;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +30,7 @@ class LendingResultTest {
 
     @Test
     void successCarriesLendingDetails() {
-        var lending = new BookLendingResult(
+        var lending = new LendingDetail(
             new BookId(1L),
             new MemberId(2L),
             Instant.parse("2026-05-01T00:00:00Z"),
