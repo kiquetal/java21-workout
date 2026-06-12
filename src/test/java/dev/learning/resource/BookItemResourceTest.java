@@ -34,7 +34,7 @@ class BookItemResourceTest {
             .post("/api/book-items")
         .then()
             .statusCode(400);
-    }
+    }                                                                                                                                                                                               
 
     @Test
     void createWithNonExistentBook_returns404or409() {
