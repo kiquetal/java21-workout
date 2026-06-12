@@ -14,7 +14,8 @@ import jakarta.inject.Inject;
 import java.util.Optional;
 
 @ApplicationScoped
-public class LendingService {
+public class LendingService
+{
 
     @Inject
     BookRepository bookRepository;
@@ -26,12 +27,13 @@ public class LendingService {
     LendingRepository lendingRepository;
 
 
-
-    private Either<LendingResult, Member> findMember(LendCommand lendCommand) {
+    private Either<LendingResult, Member> findMember(LendCommand lendCommand)
+    {
 
         Optional<Member> memberOpt = memberRepository.findByMemberId(lendCommand.memberId());
-        return memberOpt.map(
-                Either.Right::new
-        ).orElse(new LendingResult.MemberNotFound(lendCommand.memberId()));
+        return memberOpt.<Either<LendingResult, Member>>map(
+                Either::right
+        ).orElse(new Either.Left<>(new LendingResult.MemberNotFound(lendCommand.memberId())));
 
+    }
 }
