@@ -36,4 +36,20 @@ public sealed interface Either<L, R>
         }
     }
 
+    default <T> T fold(Function<L,T> left, Function<R,T> right) {
+
+        switch (this) {
+
+            case Left<L, R> l -> {
+                return left.apply(l.value());
+            }
+            case Right<L, R> r -> {
+                return right.apply(r.value());
+            }
+        }
+
+
+
+    }
+
 }
