@@ -32,6 +32,6 @@ public class LendingService {
         Optional<Member> memberOpt = memberRepository.findByMemberId(lendCommand.memberId());
         return memberOpt.map(
                 Either.Right::new
-        ).orElse(new Either.Left<>(new LendingResult.MemberNotFound(lendCommand.memberId())));
+        ).orElse(new LendingResult.MemberNotFound(lendCommand.memberId()));
 
 }
