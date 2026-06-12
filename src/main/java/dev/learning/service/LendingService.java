@@ -33,7 +33,7 @@ public class LendingService
         Optional<Member> memberOpt = memberRepository.findByMemberId(lendCommand.memberId());
         return memberOpt.<Either<LendingResult, Member>>map(
                 Either::right
-        ).orElse(new Either.Left<>(new LendingResult.MemberNotFound(lendCommand.memberId())));
+        ).orElse(Either.left(new LendingResult.MemberNotFound(lendCommand.memberId())));
 
     }
 }
