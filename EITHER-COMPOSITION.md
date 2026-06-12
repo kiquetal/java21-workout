@@ -85,6 +85,83 @@ result {
 ```
 Java has no computation expressions — you write the `.flatMap(...)` chain manually. Same logic, visible plumbing.
 
+## How The Chain Flows (ASCII)
+
+```
+findMember(cmd)          .flatMap(checkNoOverdue)       .flatMap(findBookItem)       .fold(...)
+      │                          │                            │                        │
+      ▼                          ▼                            ▼                        ▼
+┌──────────────┐          ┌──────────────┐             ┌──────────────┐         ┌────────────┐
+│ Either<L, R> │──────────│ Either<L, R> │─────────────│ Either<L, R> │────────▶│   plain T  │
+└──────────────┘          └──────────────┘             └──────────────┘         └────────────┘
+  created here              same box or                  same box or              box opened
+                            new one                      new one                  here
+```
+
+### What `this` means at each step:
+
+```
+findMember(cmd)                      ← creates Either (Left or Right)
+       │
+       ▼
+  [Either A]  ← this inside flatMap IS this object
+       │
+       │  .flatMap(checkNoOverdue)   ← if Right: calls checkNoOverdue(member), returns new Either
+       │                               if Left: skips, returns same Left
+       ▼
+  [Either B]  ← this inside next flatMap IS this object
+       │
+       │  .flatMap(findBookItem)
+       ▼
+  [Either C]  ← this inside fold IS this object
+       │
+       │  .fold(err -> err, success -> Success(success))
+       ▼
+  [LendingResult]  ← no more Either, plain value
+```
+
+### Left short-circuits everything:
+
+```
+findMember returns Left(MemberNotFound)
+       │
+       ▼
+  [Left(MemberNotFound)]
+       │
+       │  .flatMap(checkNoOverdue)  ← SKIPPED, Left passes through
+       ▼
+  [Left(MemberNotFound)]
+       │
+       │  .flatMap(findBookItem)    ← SKIPPED, Left passes through
+       ▼
+  [Left(MemberNotFound)]
+       │
+       │  .fold(err -> err, ...)    ← first function called: err -> err
+       ▼
+  LendingResult.MemberNotFound      ← final answer
+```
+
+### Right flows through all steps:
+
+```
+findMember returns Right(member)
+       │
+       ▼
+  [Right(member)]
+       │
+       │  .flatMap(checkNoOverdue)  ← called with member, returns Right(member)
+       ▼
+  [Right(member)]
+       │
+       │  .flatMap(findBookItem)    ← called, returns Right(bookItem)
+       ▼
+  [Right(bookItem)]
+       │
+       │  .fold(err -> err, success -> Success(success))  ← second function called
+       ▼
+  LendingResult.Success(bookItem)   ← final answer
+```
+
 ## Decisions Made
 - `Either` lives in `dev.learning.domain.type` — it's a foundational type, not domain-specific
 - Left = sealed result variants (LendingResult, BookItemResult, etc.)
