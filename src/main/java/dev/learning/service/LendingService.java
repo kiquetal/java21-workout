@@ -51,7 +51,7 @@ public class LendingService
             var overdueBooks = lendingRepository.listBookLendingBorrowed(memberId);
             //convert overdueBooks to bookdetails
             List<LendingDetail> lendingDetails = overdueBooks.stream().map(
-                     b ->  new LendingDetail(new BookId(b.id), memberId, b.dueDate,b.borrowedAt)
+                     b ->  new LendingDetail(new BookId(b.bookItem.id), memberId, b.dueDate,b.borrowedAt)
             ).toList();
 
             return Either.left(new LendingResult.MemberHasOverdueBooks(memberId, lendingDetails));
