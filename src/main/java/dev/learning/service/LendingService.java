@@ -16,6 +16,9 @@ import dev.learning.repository.MemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.TemporalAmount;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,10 +75,18 @@ public class LendingService
     }
     public LendingResult lend(LendCommand lendCommand){
 
-        
+        return findMember(lendCommand)
+                .flatMap(this::checkOverdue)
+                .flatMap(m -> findBookItem(lendCommand))
+                .fold(
+                         e -> e,
+                          bookItem ->
+                                  new LendingResult.Success(new LendingDetail(new BookItemId(bookItem.id), new MemberId(bookItem.book.id), Instant.now().plus(Duration.ofDays(8)), Instant.now()))
+                );
 
 
-        return null;
+
+
     }
 
 }
