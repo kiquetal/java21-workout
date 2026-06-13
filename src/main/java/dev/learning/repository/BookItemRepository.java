@@ -3,7 +3,7 @@ package dev.learning.repository;
 import dev.learning.domain.entity.BookItem;
 import dev.learning.domain.type.book_item.BookItemInfo;
 import dev.learning.domain.type.book_item.BookItemStatus;
-import dev.learning.domain.type.book_item.BookId;
+import dev.learning.domain.type.book_item.BookItemId;
 import dev.learning.domain.type.books.BookInfo;
 import dev.learning.domain.type.books.Isbn;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
