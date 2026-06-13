@@ -52,7 +52,7 @@ public class LendingService
             //convert overdueBooks to bookdetails
             List<LendingDetail> lendingDetails = overdueBooks.stream().map(
                      b ->  new LendingDetail(new BookId(b.id), memberId, b.dueDate,b.borrowedAt)
-            ).collect(java.util.stream.Collectors.toList());
+            ).toList();
 
             return Either.left(new LendingResult.MemberHasOverdueBooks(memberId, lendingDetails));
         }
