@@ -12,7 +12,7 @@ public sealed interface Either<L, R>
     {
     }
 
-    static <L, R> Either<L, R> left(L value) { return new Left<>(value); }
+    static <L,R>  Either<L, R> left(L value) { return new Left<>(value); }
     static <L, R> Either<L, R> right(R value) { return new Right<>(value); }
 
     default <U> Either<L,U> map (Function<R,U> f) {
@@ -40,9 +40,7 @@ public sealed interface Either<L, R>
     }
 
     default <T> T fold(Function<L,T> left, Function<R,T> right) {
-
         switch (this) {
-
             case Left<L, R> l -> {
                 return left.apply(l.value());
             }
@@ -50,9 +48,6 @@ public sealed interface Either<L, R>
                 return right.apply(r.value());
             }
         }
-
-
-
     }
 
 }
