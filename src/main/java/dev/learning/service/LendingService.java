@@ -5,7 +5,7 @@ import dev.learning.domain.command.LendCommand;
 import dev.learning.domain.entity.Member;
 import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.Either;
-import dev.learning.domain.type.book_item.BookId;
+import dev.learning.domain.type.book_item.BookItemId;
 import dev.learning.domain.type.lending.LendingDetail;
 import dev.learning.domain.type.member.MemberId;
 import dev.learning.repository.BookRepository;
@@ -51,11 +51,20 @@ public class LendingService
             var overdueBooks = lendingRepository.listBookLendingBorrowed(memberId);
             //convert overdueBooks to bookdetails
             List<LendingDetail> lendingDetails = overdueBooks.stream().map(
-                     b ->  new LendingDetail(new BookId(b.bookItem.id), memberId, b.dueDate,b.borrowedAt)
+                     b ->  new LendingDetail(new BookItemId(b.bookItem.id), memberId, b.dueDate,b.borrowedAt)
             ).toList();
 
             return Either.left(new LendingResult.MemberHasOverdueBooks(memberId, lendingDetails));
         }
         return Either.right(member);
     }
+
+
+    public LendingResult lend(LendCommand lendCommand){
+
+
+
+        return null;
+    }
+
 }
