@@ -6,5 +6,5 @@ import dev.learning.domain.type.member.MemberId;
 
 import java.time.Instant;
 
-public record LendCommand(BookItemId bookId, MemberId memberId, Instant startDate, Instant endDate, LendStatus status){}
+public record LendCommand(BookItemId bookItemId, MemberId memberId, Instant startDate, Instant endDate, LendStatus status){}
 

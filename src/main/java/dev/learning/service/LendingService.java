@@ -2,12 +2,14 @@ package dev.learning.service;
 
 
 import dev.learning.domain.command.LendCommand;
+import dev.learning.domain.entity.BookItem;
 import dev.learning.domain.entity.Member;
 import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.Either;
 import dev.learning.domain.type.book_item.BookItemId;
 import dev.learning.domain.type.lending.LendingDetail;
 import dev.learning.domain.type.member.MemberId;
+import dev.learning.repository.BookItemRepository;
 import dev.learning.repository.BookRepository;
 import dev.learning.repository.LendingRepository;
 import dev.learning.repository.MemberRepository;
@@ -32,7 +34,8 @@ public class LendingService
     @Inject
     LendingRepository lendingRepository;
 
-
+    @Inject
+    BookItemRepository bookItemRepository;
     private Either<LendingResult, Member> findMember(LendCommand lendCommand)
     {
 
@@ -60,6 +63,13 @@ public class LendingService
     }
 
 
+    private Either<LendingResult, BookItem> findBookItem(LendCommand lendCommand)
+    {
+        var bookItemOpt = bookItemRepository.findByIdOptional(lendCommand.bookItemId().value());
+        return bookItemOpt.<Either<LendingResult, BookItem>>map(
+                Either::right
+        ).orElse(Either.left(new LendingResult.BookNotFound(lendCommand.bookItemId().value())));
+    }
     public LendingResult lend(LendCommand lendCommand){
 
 
