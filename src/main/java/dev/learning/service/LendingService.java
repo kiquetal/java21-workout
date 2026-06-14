@@ -78,11 +78,9 @@ public class LendingService
         return findMember(lendCommand)
                 .flatMap(this::checkOverdue)
                 .flatMap(m -> findBookItem(lendCommand))
-                .fold(
-                         e -> e,
-                          bookItem ->
-                                  new LendingResult.Success(new LendingDetail(new BookItemId(bookItem.id), new MemberId(bookItem.book.id), Instant.now().plus(Duration.ofDays(8)), Instant.now()))
-                );
+
+                .fold( err -> err ,
+                        i -> new LendingResult.Success(new LendingDetail(new BookItemId(i.id), new MemberId(i.member.id), lendCommand.dueDate(), lendCommand.borrowedAt())))
 
 
 
