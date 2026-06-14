@@ -7,18 +7,16 @@ import dev.learning.domain.entity.Member;
 import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.Either;
 import dev.learning.domain.type.book_item.BookItemId;
+import dev.learning.domain.type.book_item.BookItemStatus;
 import dev.learning.domain.type.lending.LendingDetail;
 import dev.learning.domain.type.member.MemberId;
 import dev.learning.repository.BookItemRepository;
 import dev.learning.repository.BookRepository;
-import dev.learning.repository.LendingRepository;
+import dev.learning.repository.BookLendingRe;
 import dev.learning.repository.MemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.TemporalAmount;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,7 +33,7 @@ public class LendingService
     MemberRepository memberRepository;
 
     @Inject
-    LendingRepository lendingRepository;
+    BookLendingRe lendingRepository;
 
     @Inject
     BookItemRepository bookItemRepository;
@@ -85,11 +83,11 @@ public class LendingService
                 .fold( err -> err ,
                         bookItem -> {
 
-                            if (bookItem.bookItem.status != dev.learning.domain.type.book_item.BookItemStatus.AVAILABLE) {
+                            if (bookItem.bookItem.status != BookItemStatus.AVAILABLE) {
                                 var lendingDetail = new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), null, null);
                                 return new LendingResult.AlreadyLent(lendingDetail);
                             }
-                            bookItem.bookItem.status = dev.learning.domain.type.book_item.BookItemStatus.LENT;
+                            bookItem.bookItem.status = BookItemStatus.LENT;
                             bookItemRepository.persist(bookItem.bookItem);
                             var lending = lendingRepository.createLending(bookItem.bookItem, bookItem.member, lendCommand.borrowedAt(), lendCommand.dueDate());
                             var lendingDetail = new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), lending.dueDate, lending.borrowedAt);

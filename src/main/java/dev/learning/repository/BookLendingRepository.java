@@ -13,7 +13,7 @@ import java.util.List;
 
 
 @ApplicationScoped
-public class LendingRepository implements PanacheRepository<BookLending> {
+public class BookLendingRepository implements PanacheRepository<BookLending> {
     public List<BookLending> listBookLendingBorrowed(MemberId memberId) {
 
         return list("member.id = ?1 and status =?2 ", memberId, LendStatus.LENT) ;
