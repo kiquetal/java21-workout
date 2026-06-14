@@ -3,6 +3,7 @@ package dev.learning.service;
 
 import dev.learning.domain.command.LendCommand;
 import dev.learning.domain.entity.BookItem;
+import dev.learning.domain.entity.BookLending;
 import dev.learning.domain.entity.Member;
 import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.Either;
@@ -10,13 +11,12 @@ import dev.learning.domain.type.book_item.BookItemId;
 import dev.learning.domain.type.book_item.BookItemStatus;
 import dev.learning.domain.type.lending.LendingDetail;
 import dev.learning.domain.type.member.MemberId;
-import dev.learning.repository.BookItemRepository;
-import dev.learning.repository.BookRepository;
-import dev.learning.repository.BookLendingRe;
-import dev.learning.repository.MemberRepository;
+import dev.learning.repository.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +33,7 @@ public class LendingService
     MemberRepository memberRepository;
 
     @Inject
-    BookLendingRe lendingRepository;
+    BookLendingRepository bookLendingRepository;
 
     @Inject
     BookItemRepository bookItemRepository;
@@ -50,9 +50,9 @@ public class LendingService
     private Either<LendingResult,Member> checkOverdue(Member member)
     {
         var memberId = new MemberId(member.id);
-        var hasOverdue = lendingRepository.hasOverdueBook(memberId);
+        var hasOverdue = bookLendingRepository.hasOverdueBook(memberId);
         if (hasOverdue) {
-            var overdueBooks = lendingRepository.listBookLendingBorrowed(memberId);
+            var overdueBooks = bookLendingRepository.listBookLendingBorrowed(memberId);
             //convert overdueBooks to bookdetails
             List<LendingDetail> lendingDetails = overdueBooks.stream().map(
                      b ->  new LendingDetail(new BookItemId(b.bookItem.id), memberId, b.dueDate,b.borrowedAt)
@@ -75,6 +75,7 @@ public class LendingService
 
 
     }
+    @Transactional
     public LendingResult lend(LendCommand lendCommand){
 
         return findMember(lendCommand)
@@ -89,8 +90,13 @@ public class LendingService
                             }
                             bookItem.bookItem.status = BookItemStatus.LENT;
                             bookItemRepository.persist(bookItem.bookItem);
-                            var lending = lendingRepository.createLending(bookItem.bookItem, bookItem.member, lendCommand.borrowedAt(), lendCommand.dueDate());
-                            var lendingDetail = new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), lending.dueDate, lending.borrowedAt);
+                            var bookItemLending = new BookLending();
+                            bookItemLending.bookItem = bookItem.bookItem;
+                            bookItemLending.member = bookItem.member;
+                            bookItemLending.borrowedAt = Instant.now()
+                            bookItemLending.dueDate = lendCommand.dueDate();
+                            bookLendingRepository.persist(bookItemLending);
+                            var lendingDetail = new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), bookItemLending.dueDate, bookItemLending.borrowedAt);
                             return new LendingResult.Success(lendingDetail);
                         }
 
