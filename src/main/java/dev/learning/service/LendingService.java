@@ -66,22 +66,37 @@ public class LendingService
     }
 
 
-    private Either<LendingResult, BookItem> findBookItem(LendCommand lendCommand)
+    private record BookItemAndMemberRecord(BookItem bookItem, Member member)
     {
+    }
+    private Either<LendingResult, BookItemAndMemberRecord> findBookItemAndMember(LendCommand lendCommand,Member member)
+    {
+
         var bookItemOpt = bookItemRepository.findByIdOptional(lendCommand.bookItemId().value());
-        return bookItemOpt.<Either<LendingResult, BookItem>>map(
-                Either::right
-        ).orElse(Either.left(new LendingResult.BookNotFound(lendCommand.bookItemId().value())));
+        return bookItemOpt.<Either<LendingResult, BookItemAndMemberRecord>>map(bookItem -> Either.right(new BookItemAndMemberRecord(bookItem, member))).orElseGet(() -> Either.left(new LendingResult.BookNotFound(lendCommand.bookItemId().value())));
+
+
     }
     public LendingResult lend(LendCommand lendCommand){
 
         return findMember(lendCommand)
                 .flatMap(this::checkOverdue)
-                .flatMap(m -> findBookItem(lendCommand))
-
+                .flatMap(m -> findBookItemAndMember(lendCommand,m))
                 .fold( err -> err ,
-                        i -> new LendingResult.Success(new LendingDetail(new BookItemId(i.id), new MemberId(i.member.id), lendCommand.dueDate(), lendCommand.borrowedAt())))
+                        bookItem -> {
 
+                            if (bookItem.bookItem.status != dev.learning.domain.type.book_item.BookItemStatus.AVAILABLE) {
+                                var lendingDetail = new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), null, null);
+                                return new LendingResult.AlreadyLent(lendingDetail);
+                            }
+                            bookItem.bookItem.status = dev.learning.domain.type.book_item.BookItemStatus.LENT;
+                            bookItemRepository.persist(bookItem.bookItem);
+                            var lending = lendingRepository.createLending(bookItem.bookItem, bookItem.member, lendCommand.borrowedAt(), lendCommand.dueDate());
+                            var lendingDetail = new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), lending.dueDate, lending.borrowedAt);
+                            return new LendingResult.Success(lendingDetail);
+                        }
+
+                );
 
 
 
