@@ -14,7 +14,7 @@ class LendingResourceTest {
         given()
             .contentType("application/json")
             .body("""
-                {"bookId": 1, "memberId": 99999, "dueDate": "2026-07-01"}
+                {"bookId": 1, "memberId": 99999}
                 """)
         .when()
             .post("/api/lendings")
@@ -28,7 +28,7 @@ class LendingResourceTest {
         given()
             .contentType("application/json")
             .body("""
-                {"bookId": 99999, "memberId": 1, "dueDate": "2026-07-01"}
+                {"bookId": 99999, "memberId": 1}
                 """)
         .when()
             .post("/api/lendings")
@@ -55,7 +55,7 @@ class LendingResourceTest {
         given()
             .contentType("application/json")
             .body("""
-                {"bookId": 1, "memberId": 1, "dueDate": "not-a-date"}
+                {"bookId": "not-a-number", "memberId": 1}
                 """)
         .when()
             .post("/api/lendings")

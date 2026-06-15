@@ -9,26 +9,24 @@ import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.Either;
 import dev.learning.domain.type.book_item.BookItemId;
 import dev.learning.domain.type.book_item.BookItemStatus;
+import dev.learning.domain.type.lending.LendStatus;
 import dev.learning.domain.type.lending.LendingDetail;
 import dev.learning.domain.type.member.MemberId;
-import dev.learning.repository.*;
+import dev.learning.repository.BookItemRepository;
+import dev.learning.repository.BookLendingRepository;
+import dev.learning.repository.MemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.jspecify.annotations.Nullable;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import static java.util.Arrays.stream;
-
 @ApplicationScoped
 public class LendingService
 {
-
-    @Inject
-    BookRepository bookRepository;
 
     @Inject
     MemberRepository memberRepository;
@@ -38,25 +36,23 @@ public class LendingService
 
     @Inject
     BookItemRepository bookItemRepository;
+
     private Either<LendingResult, Member> findMember(LendCommand lendCommand)
     {
-
         Optional<Member> memberOpt = memberRepository.findByMemberId(lendCommand.memberId());
         return memberOpt.<Either<LendingResult, Member>>map(
                 Either::right
         ).orElse(Either.left(new LendingResult.MemberNotFound(lendCommand.memberId())));
-
     }
 
-    private Either<LendingResult,Member> checkOverdue(Member member)
+    private Either<LendingResult, Member> checkOverdue(Member member)
     {
         var memberId = new MemberId(member.id);
         var hasOverdue = bookLendingRepository.hasOverdueBook(memberId);
         if (hasOverdue) {
             var overdueBooks = bookLendingRepository.listBookLendingBorrowed(memberId);
-            //convert overdueBooks to bookdetails
             List<LendingDetail> lendingDetails = overdueBooks.stream().map(
-                     b ->  new LendingDetail(new BookItemId(b.bookItem.id), memberId, b.dueDate,b.borrowedAt)
+                     b -> new LendingDetail(new BookItemId(b.bookItem.id), memberId, b.dueDate, b.borrowedAt)
             ).toList();
 
             return Either.left(new LendingResult.MemberHasOverdueBooks(memberId, lendingDetails));
@@ -64,45 +60,14 @@ public class LendingService
         return Either.right(member);
     }
 
+    private record BookItemAndMemberRecord(BookItem bookItem, Member member) {}
 
-    private record BookItemAndMemberRecord(BookItem bookItem, Member member)
+    private Either<LendingResult, BookItemAndMemberRecord> findBookItemAndMember(LendCommand lendCommand, Member member)
     {
-    }
-    private Either<LendingResult, BookItemAndMemberRecord> findBookItemAndMember(LendCommand lendCommand,Member member)
-    {
-
         var bookItemOpt = bookItemRepository.findByIdOptional(lendCommand.bookItemId().value());
-        return bookItemOpt.<Either<LendingResult, BookItemAndMemberRecord>>map(bookItem -> Either.right(new BookItemAndMemberRecord(bookItem, member))).orElseGet(() -> Either.left(new LendingResult.BookNotFound(lendCommand.bookItemId().value())));
-
-
-    }
-    @Transactional
-    public LendingResult lend(LendCommand lendCommand){
-
-        return findMember(lendCommand)
-                .flatMap(this::checkOverdue)
-                .flatMap(m -> findBookItemAndMember(lendCommand,m))
-                .flatMap(this::checkIfAlreadyLent)
-                .fold( err -> err ,
-                        bookItem -> persistAndReturnResult(bookItem,lendCommand)
-
-                );
-
-
-
-    }
-
-    private LendingResult persistAndReturnResult(BookItemAndMemberRecord bookItem, LendCommand lendCommand)
-    {
-        var lending = new BookLending();
-        lending.bookItem = bookItem.bookItem;
-        lending.member = bookItem.member;
-        lending.borrowedAt = Instant.now();
-        lending.dueDate = Instant.now().plus(java.time.Duration.ofDays(8));
-        lending.status = dev.learning.domain.type.lending.LendStatus.LENT;
-        bookLendingRepository.persist(lending);
-        bookItem.bookItem.status = BookItemStatus.LENT;
-        return new LendingResult.Success(new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), lending.dueDate, lending.borrowedAt));
+        return bookItemOpt.<Either<LendingResult, BookItemAndMemberRecord>>map(
+                bookItem -> Either.right(new BookItemAndMemberRecord(bookItem, member))
+        ).orElseGet(() -> Either.left(new LendingResult.BookNotFound(lendCommand.bookItemId().value())));
     }
 
     private Either<LendingResult, BookItemAndMemberRecord> checkIfAlreadyLent(BookItemAndMemberRecord record)
@@ -114,4 +79,26 @@ public class LendingService
         return Either.right(record);
     }
 
+    private LendingResult persistAndReturnResult(BookItemAndMemberRecord bookItem)
+    {
+        var lending = new BookLending();
+        lending.bookItem = bookItem.bookItem;
+        lending.member = bookItem.member;
+        lending.borrowedAt = Instant.now();
+        lending.dueDate = Instant.now().plus(Duration.ofDays(8));
+        lending.status = LendStatus.LENT;
+        bookLendingRepository.persist(lending);
+        bookItem.bookItem.status = BookItemStatus.LENT;
+        return new LendingResult.Success(new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), lending.dueDate, lending.borrowedAt));
+    }
+
+    @Transactional
+    public LendingResult lend(LendCommand lendCommand)
+    {
+        return findMember(lendCommand)
+                .flatMap(this::checkOverdue)
+                .flatMap(m -> findBookItemAndMember(lendCommand, m))
+                .flatMap(this::checkIfAlreadyLent)
+                .fold(err -> err, this::persistAndReturnResult);
+    }
 }

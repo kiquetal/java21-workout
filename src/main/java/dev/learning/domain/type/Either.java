@@ -21,23 +21,17 @@ public sealed interface Either<L,R> {
     }
 
     default  <U> Either<L, U> map(Function<R, U> f) {
-
-        switch (this) {
+        return switch (this) {
             case Left<L, R> left -> new Left<>(left.value());
             case Right<L, R> right -> new Right<>(f.apply(right.value()));
         };
-
-        return null;
     }
 
     default <U> Either<L,U> flatMap(Function<R,Either<L,U>> f) {
-
-        switch (this) {
+        return switch (this) {
             case Left<L, R> left -> new Left<>(left.value());
             case Right<L, R> right -> f.apply(right.value());
         };
-
-        return null;
     }
 
     default <U> U fold(Function<L, U> f, Function<R, U> g) {
