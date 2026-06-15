@@ -93,16 +93,16 @@ public class LendingService
     }
 
     private LendingResult persistAndReturnResult(BookItemAndMemberRecord bookItem, LendCommand lendCommand)
-    {        var lending = new BookLending();
+    {
+        var lending = new BookLending();
         lending.bookItem = bookItem.bookItem;
         lending.member = bookItem.member;
-        lending.borrowedAt = lendCommand.borrowedAt();
-        lending.dueDate = lendCommand.dueDate();
+        lending.borrowedAt = Instant.now();
+        lending.dueDate = Instant.now().plus(java.time.Duration.ofDays(8));
+        lending.status = dev.learning.domain.type.lending.LendStatus.LENT;
         bookLendingRepository.persist(lending);
         bookItem.bookItem.status = BookItemStatus.LENT;
         return new LendingResult.Success(new LendingDetail(new BookItemId(bookItem.bookItem.id), new MemberId(bookItem.member.id), lending.dueDate, lending.borrowedAt));
-
-
     }
 
     private Either<LendingResult, BookItemAndMemberRecord> checkIfAlreadyLent(BookItemAndMemberRecord record)
