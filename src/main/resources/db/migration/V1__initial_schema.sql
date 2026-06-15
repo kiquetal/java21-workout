@@ -1,0 +1,36 @@
+CREATE TABLE book (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    isbn VARCHAR(13) NOT NULL UNIQUE,
+    publisher VARCHAR(255),
+    publish_date TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE member (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    address VARCHAR(255),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+    created_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE book_item (
+    id BIGSERIAL PRIMARY KEY,
+    book_id BIGINT REFERENCES book(id),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('AVAILABLE', 'LENT', 'UNAVAILABLE', 'DAMAGED')),
+    notes VARCHAR(255),
+    creation_date TIMESTAMP WITH TIME ZONE,
+    update_date TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE book_lending (
+    id BIGSERIAL PRIMARY KEY,
+    book_item_id BIGINT NOT NULL REFERENCES book_item(id),
+    member_id BIGINT NOT NULL REFERENCES member(id),
+    borrowed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    returned_at TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('AVAILABLE', 'LENT', 'RETURNED', 'LENT_EXPIRED'))
+);
