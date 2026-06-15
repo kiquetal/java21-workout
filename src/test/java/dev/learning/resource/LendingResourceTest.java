@@ -9,6 +9,9 @@ import static org.hamcrest.Matchers.*;
 @QuarkusTest
 class LendingResourceTest {
 
+
+
+
     @Test
     void lendWithNonExistentMember_returns404() {
         given()
@@ -62,4 +65,10 @@ class LendingResourceTest {
         .then()
             .statusCode(400);
     }
+    @Test
+    void checkMaximunNumberOfLending() {
+
+    }
+
+
 }
