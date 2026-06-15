@@ -1,158 +1,139 @@
-# Book Lending — Java 21+ Domain Modeling Playground
+# Book Lending — Java 21+ Functional Domain Modeling
 
-A Quarkus project for practicing modern Java domain modeling: sealed types, records, pattern matching, and type-driven design.
+A Quarkus project for practicing modern Java with a **functional mindset**: sealed types as control flow, records as immutable data, pattern matching as dispatch, and railway-oriented composition for error handling.
 
 ## Quick Start
 
 ```bash
-cd book-lending
 ./mvnw quarkus:dev
 ```
 
-Dev Services auto-starts PostgreSQL. Flyway runs migrations. Hit `http://localhost:8080/q/dev-ui` for the Dev UI.
+Dev Services auto-starts PostgreSQL. Flyway runs migrations. Hit `http://localhost:8080/chiron/q/dev-ui` for the Dev UI.
 
 ```bash
-# Lend a book
-curl -X POST http://localhost:8080/api/lendings \
+curl -X POST http://localhost:8080/chiron/api/lendings \
   -H "Content-Type: application/json" \
-  -d '{"bookId": 1, "memberId": 1, "dueDate": "2026-04-30"}'
+  -d '{"bookId": 1, "memberId": 1}'
 ```
+
+## The Functional Approach
+
+### Why Functional in Java?
+
+| Imperative habit | Functional replacement | Benefit |
+|------------------|----------------------|---------|
+| Throw exceptions for business failures | Return sealed result types | Compiler enforces handling |
+| Null checks with early returns | `Optional` chains / `Either` | No forgotten paths |
+| Mutable DTOs | Immutable records | Construct once, trust everywhere |
+| `if-else` trees | Pattern matching on sealed types | Exhaustive, concise |
+| Try-catch at every layer | Railway composition (`flatMap`) | Errors flow to one exit point |
+
+### The Three Pillars
+
+**1. Sealed types = "one of these"** (sum types)
+
+```java
+sealed interface LendingResult {
+    record Success(LendingDetail book) implements LendingResult {}
+    record MemberNotFound(MemberId id) implements LendingResult {}
+    record AlreadyLent(LendingDetail detail) implements LendingResult {}
+    record MaximumLimitReached(MemberId id) implements LendingResult {}
+}
+```
+
+**2. Records = "all of these together"** (product types)
+
+```java
+record LendCommand(BookItemId bookItemId, MemberId memberId) {}
+record LendingDetail(BookItemId bookId, MemberId memberId, Instant dueTime, Instant borrowAt) {}
+```
+
+**3. Either + flatMap = railway composition**
+
+```java
+return findMember(cmd)
+    .flatMap(this::checkOverdue)
+    .flatMap(this::checkMaximumLentNumber)
+    .flatMap(m -> findBookItemAndMember(cmd, m))
+    .flatMap(this::checkIfAlreadyLent)
+    .fold(err -> err, this::persistAndReturnResult);
+```
+
+Each step can succeed (Right) or fail (Left). First failure stops the chain — error flows to `fold`.
+
+### When This Style Helps vs Doesn't
+
+| ✅ Use it when | ❌ Don't force it when |
+|---------------|----------------------|
+| Multi-step validation pipelines | Simple CRUD with no rules |
+| Multiple distinct error types from one operation | The method can't fail |
+| Data transformation (DTO ↔ Domain) | Performance-critical tight loops |
+| Making illegal states unrepresentable | Team hasn't learned the pattern yet |
+
+### Functional vs Concurrency — Different Axes
+
+```
+┌─────────────────────────────────┐
+│     What to compute             │  ← Functional (Either, sealed types, flatMap)
+│  (logic, data flow, errors)     │
+└─────────────────────────────────┘
+              ↕  orthogonal
+┌─────────────────────────────────┐
+│     How to execute it           │  ← Concurrency (virtual threads, StructuredTaskScope)
+│  (parallelism, threading)       │
+└─────────────────────────────────┘
+```
+
+- **Sequential dependencies** (step N needs step N-1) → functional pipeline
+- **Independent fan-out** (fetch A, B, C in parallel) → `StructuredTaskScope`
+- **Blocking I/O on hot paths** → `@RunOnVirtualThread`
+
+They compose — a pipeline runs on a virtual thread, and parallel results feed into `flatMap` chains.
+
+---
 
 ## Project Structure
 
 ```
 src/main/java/dev/learning/
-├── domain/          # Entities, sealed types, value records (core model)
-├── dto/             # Request/response records (API boundary)
-├── service/         # Business logic, returns sealed results
-├── resource/        # JAX-RS endpoints, pattern match → HTTP
-└── repository/      # Panache repositories (when needed)
+├── domain/
+│   ├── entity/      # Panache entities (classes — Hibernate requirement)
+│   ├── type/        # Value types — validated records (BookItemId, Email, Isbn, Either)
+│   ├── command/     # Action records (LendCommand, CreateMemberCommand)
+│   └── result/      # Sealed result interfaces (LendingResult, BookItemResult)
+├── repository/      # Panache repositories — all DB access
+├── service/         # Business logic — pipelines that return sealed results
+├── resource/        # JAX-RS endpoints — parse DTOs, pattern match results → HTTP
+└── dto/             # Request/response records — API boundary
 ```
 
-## Key Concepts Practiced
+### Layer Rules
 
-### 1. Schema Migrations with Flyway
+- **Services** never call entity statics — always go through repositories
+- **Resources** parse DTOs → domain commands, pattern match sealed results → HTTP
+- **Repositories** accept/return domain types (`findByMemberId(MemberId)`, not `findById(Long)`)
+- **Entities** are classes; everything else is records
 
-Flyway owns the schema — Hibernate DDL generation is disabled.
+### Service Method Shape
 
-```properties
-quarkus.hibernate-orm.database.generation=none
-quarkus.flyway.migrate-at-start=true
-```
-
-Versioned SQL files in `src/main/resources/db/migration/`:
+Every service method follows:
 
 ```
-V1__initial_schema.sql   # Tables, constraints, indexes
-V2__seed_data.sql        # Dev data
+Command (validated) → Pipeline (Either chain) → Sealed Result
 ```
 
-**Dev UI shortcut**: When starting fresh, the Quarkus Dev UI (`/q/dev-ui`) has a Flyway card with a "Create Initial Migration" button that generates DDL from your entities.
+1. **Parse** — Resource converts DTO → Command with value types
+2. **Decide** — Service runs pipeline: reads via repo, applies rules
+3. **Execute** — Final step persists (the only side effect)
+4. **Respond** — Resource pattern-matches result → HTTP response
 
-### 2. PanacheEntity Uses Sequences, Not BIGSERIAL
+Side effects happen only at the end. Everything before is a decision.
 
-This is a common trap when writing migrations by hand. PostgreSQL has two ways to auto-generate IDs:
+---
 
-**BIGSERIAL (identity)** — the database picks the ID on INSERT:
-```sql
--- ❌ What you might write by hand
-CREATE TABLE book (
-    id BIGSERIAL PRIMARY KEY,   -- DB assigns 1, 2, 3, 4...
-    title VARCHAR(255) NOT NULL
-);
-```
+## Patterns & Learnings
 
-**BIGINT + SEQUENCE** — Hibernate picks the ID before INSERT:
-```sql
--- ✅ What Panache actually expects
-CREATE SEQUENCE book_SEQ START WITH 1 INCREMENT BY 50;
-CREATE TABLE book (
-    id BIGINT NOT NULL PRIMARY KEY,   -- Hibernate assigns from sequence
-    title VARCHAR(255) NOT NULL
-);
-```
-
-Why `INCREMENT BY 50`? Hibernate pre-fetches IDs in batches. One `SELECT nextval('book_SEQ')` gives it 50 IDs to use in memory — no DB roundtrip per insert.
-
-```
-BIGSERIAL:                          SEQUENCE (Panache):
-INSERT → DB picks id=1             nextval('book_SEQ') → 1 (gets 1-50)
-INSERT → DB picks id=2             INSERT with id=1  (no DB call)
-INSERT → DB picks id=3             INSERT with id=2  (no DB call)
-...                                 ...
-(roundtrip every insert)            INSERT with id=50 (no DB call)
-                                    nextval('book_SEQ') → 51 (gets 51-100)
-```
-
-`PanacheEntity` uses `GenerationType.SEQUENCE` internally — you can't change it without overriding the `@Id` field. The naming convention is `<TABLE>_SEQ`:
-
-| Entity | Table | Sequence Panache expects |
-|---|---|---|
-| `Book` | `book` | `book_SEQ` |
-| `Member` | `member` | `member_SEQ` |
-| `BookLending` | `book_lending` | `book_lending_SEQ` |
-
-**How to avoid this mistake**: Use the entity-first workflow. Write your entities, set `database.generation=drop-and-create`, run `quarkus dev`, and check the Dev UI → Hibernate ORM card for the generated DDL. It will show you the sequences. Copy that SQL into your Flyway migration, then switch to `database.generation=none`.
-
-### 3. Entities Are Classes, Not Records
-
-Hibernate requires mutable classes with no-arg constructors. Records can't be entities:
-
-```java
-// ❌ Records are immutable, final, no no-arg constructor
-@Entity
-public record Book(Long id, String title) {}
-
-// ✅ Entities must be mutable Panache classes
-@Entity
-public class Book extends PanacheEntity {
-    public String title;
-    public String isbn;
-}
-```
-
-### 4. Records for Everything Else
-
-| Use case | Example |
-|---|---|
-| DTOs | `record LendRequest(Long bookId, ...)` |
-| Value types | `record Isbn(String value)` |
-| Sealed result variants | `record Success(BookLending lending)` |
-| Panache projections | `record BookSummary(String title, String author)` |
-| Commands | `record LendCommand(Isbn isbn, ...)` |
-
-### 5. Sealed Types as Result Types (Not Exceptions)
-
-Model business outcomes explicitly — no exceptions for expected failures:
-
-```java
-public sealed interface LendingResult {
-    record Success(BookLending lending) implements LendingResult {}
-    record BookNotAvailable(String isbn) implements LendingResult {}
-    record MemberNotFound(Long memberId) implements LendingResult {}
-}
-```
-
-This is Java's equivalent of F#'s discriminated unions / `Result<'T, 'E>`. Domain-specific sealed types are preferred over a generic `Result<T>` because:
-
-- Each failure variant carries its own typed data
-- The compiler enforces exhaustive handling
-- Adding a new variant breaks all unhandled switches at compile time
-- Variant names carry business meaning
-
-### 6. Pattern Matching in the Resource
-
-The resource translates domain results to HTTP — one exhaustive switch:
-
-```java
-return switch (result) {
-    case Success(var lending) -> Response.ok(toResponse(lending)).build();
-    case BookNotAvailable(var isbn) -> Response.status(409).entity(new ErrorResponse("...")).build();
-    case MemberNotFound(var id) -> Response.status(404).entity(new ErrorResponse("...")).build();
-};
-```
-
-### 7. Parse, Don't Validate (F#-style Value Types)
+### Parse, Don't Validate
 
 Validate at construction — make invalid states unrepresentable:
 
@@ -165,325 +146,114 @@ public record Isbn(String value) {
 }
 ```
 
-Once an `Isbn` exists, it's guaranteed valid. The domain only speaks in typed values, never raw strings.
+Once an `Isbn` exists, it's guaranteed valid. The domain never sees raw strings.
 
-### 8. DTO ↔ Domain Boundary — Why Can't It Be Like F#?
+### DTO ↔ Domain Boundary
 
-In F#, you receive raw data and parse it directly into a domain type in one step:
-
-```fsharp
-// F# — the request IS the parsing step, one type does both jobs
-type LendCommand = {
-    Isbn: Isbn           // already validated on construction
-    MemberId: MemberId   // already validated on construction
-    DueDate: DateTime
-}
-
-// JSON deserializer calls Isbn.create("978...") which returns Result<Isbn, Error>
-// If it fails, you never get a LendCommand at all
-```
-
-In Java, you **can't do this** because of Jackson (the JSON deserializer). Jackson needs:
-- A no-arg constructor OR a constructor with **simple types** (String, Long, etc.)
-- It doesn't know how to call `new Isbn("978...")` with validation inside a compact constructor
-- If the `Isbn` constructor throws, Jackson gives you a generic 400 error with no useful message
-
-So you're forced into two steps:
+Jackson needs simple types. So you're forced into two steps (unlike F# where parsing IS deserialization):
 
 ```
-Step 1: JSON → DTO (raw types, Jackson can handle this)
-Step 2: DTO → Domain types (you parse and validate here)
+JSON ──jackson──→ DTO (raw types) ──resource parses──→ Command (domain types)
 ```
-
-Concretely:
 
 ```java
-// STEP 1 — dto/LendRequest.java
-// Jackson deserializes JSON into this. Simple types only.
-public record LendRequest(
-    @NotBlank String isbn,       // just a String — Jackson is happy
-    @NotNull Long memberId,      // just a Long — Jackson is happy
-    @NotNull LocalDate dueDate
-) {}
-
-// STEP 2 — resource parses DTO into domain types
 @POST
-public Response lend(@Valid LendRequest request) {
-    // This is the F# "parse" moment — raw strings become domain types
+public Response register(@Valid LendRequest request) {
     var command = new LendCommand(
-        new Isbn(request.isbn()),           // validates here
-        new MemberId(request.memberId()),   // validates here
-        request.dueDate()
+        new BookItemId(request.bookId()),   // validates here
+        new MemberId(request.memberId())    // validates here
     );
     var result = lendingService.lend(command);
-    // ...
-}
-
-// domain/LendCommand.java — the service only sees this
-public record LendCommand(Isbn isbn, MemberId memberId, LocalDate dueDate) {}
-```
-
-The service receives `LendCommand` with **already-validated domain types**:
-
-```java
-// Service never sees raw strings. Isbn and MemberId are guaranteed valid.
-public LendingResult lend(LendCommand command) {
-    // command.isbn() → Isbn, not String
-    // command.memberId() → MemberId, not Long
-    // impossible to have invalid data here
+    return switch (result) {
+        case Success(var detail) -> Response.ok(detail).build();
+        case MemberNotFound(var id) -> Response.status(404).entity(...).build();
+        // exhaustive — compiler enforces all cases
+    };
 }
 ```
 
-**Why F# doesn't have this problem**: F#'s serializers (like Thoth.Json) support custom decoders — you write a function that parses `string → Result<Isbn, Error>` and wire it into deserialization. The parsing IS the deserialization. Java's Jackson doesn't work that way — it constructs objects first, validates later.
+### Pattern Matching as Dispatch
 
-**The mental model**:
-
-```
-F#:    JSON ──parse──→ Domain type (one step, decoder does validation)
-Java:  JSON ──jackson──→ DTO (dumb data) ──you parse──→ Domain type (two steps)
-```
-
-The resource layer is where the two-step gap lives. It's the cost of using Jackson. Everything after that boundary is the same as F# — validated types, no raw strings, no nulls.
-
-**The flow through layers**:
-
-```
-Client JSON → LendRequest (DTO, raw)
-            → LendCommand (domain, validated)     ← parsing boundary
-            → LendingService (works with domain)
-            → LendingResult (sealed outcome)
-            → LendingResponse (DTO, shaped for client)
-            → Client JSON
-```
-
-- **DTOs** live in `dto/`, face the outside world, carry validation annotations
-- **Domain types** live in `domain/`, guaranteed valid after construction
-- **The resource** is the translator — the parsing boundary
-- **The service** never sees DTOs, never knows about HTTP
-
-### 9. Validation Layers
-
-| Layer | Purpose |
-|---|---|
-| Bean Validation on DTOs | Early, user-friendly error messages (`@NotNull`, `@Size`) |
-| Value type constructors | Domain integrity (`Isbn`, `Email`) |
-| `@Column` annotations | Documents entity-to-table mapping |
-| DB constraints (Flyway SQL) | Last line of defense — always there |
-
-### 10. Panache Type Witness Quirk
-
-`findByIdOptional` returns `Optional<Object>`. Use a type witness to get the right type:
+No `default` needed on sealed types — the compiler guarantees exhaustiveness:
 
 ```java
-// ❌ Returns Optional<Object>
-Member.findByIdOptional(id)
-
-// ✅ Returns Optional<Member>
-Member.<Member>findByIdOptional(id)
+return switch (result) {
+    case LendingResult.Success(var detail) -> Response.ok(detail).build();
+    case LendingResult.AlreadyLent(var detail) -> Response.status(409).entity(...).build();
+    case LendingResult.MemberNotFound(var id) -> Response.status(404).entity(...).build();
+    case LendingResult.BookNotFound(var id) -> Response.status(404).entity(...).build();
+    case LendingResult.MemberHasOverdueBooks(var id, var books) -> Response.status(403).entity(...).build();
+    case LendingResult.MaximumLimitReached(var id) -> Response.status(403).entity(...).build();
+};
 ```
 
-### 11. Java Type Inference in Optional Chains
-
-When chaining `map`/`orElseGet` with sealed types, Java infers the type from the first branch and locks it. Use a type witness on `map` to widen:
-
-```java
-// ❌ Compiler infers map returns Optional<Success>, orElseGet fails
-.map(book -> new LendingResult.Success(lending))
-.orElseGet(() -> new LendingResult.BookNotAvailable(isbn))
-
-// ✅ Type witness tells compiler to use the parent type
-.<LendingResult>map(book -> new LendingResult.Success(lending))
-.orElseGet(() -> new LendingResult.BookNotAvailable(isbn))
-```
-
-### 12. Hibernate Dirty Checking — `persist()` vs Managed Entities
-
-When you **create** a new entity, you must call `persist()` — Hibernate doesn't know about it yet:
-
-```java
-var member = new Member();              // just a Java object, not in DB
-member.name = command.name();
-member.email = command.email().value();
-memberRepository.persist(member);       // NOW Hibernate tracks it and saves to DB
-```
-
-When you **update** an existing entity, Hibernate already loaded it — it's "managed". Any field change is auto-flushed at transaction commit:
-
-```java
-memberRepository.findByMemberId(...)    // loads from DB — Hibernate "manages" it
-    .map(member -> {
-        member.name = command.name();   // mutate the managed entity
-        member.email = ...;             // Hibernate tracks these changes
-        // no persist() needed — auto-flushed at commit
-        return new Success(member);
-    })
-```
-
-| | Create | Update |
-|---|---|---|
-| Entity comes from | `new Entity()` — not managed | `repository.find()` — managed |
-| Needs `persist()`? | Yes | No — dirty checking handles it |
-| Needs `@Transactional`? | Yes | Yes |
-
-"Managed" = Hibernate loaded it and is watching it. Change a field → Hibernate detects the diff → flushes the UPDATE at commit. No explicit save needed.
-
-### 13. `@Transactional` Belongs on the Service, Not the Resource
-
-The resource is a translator (DTO ↔ HTTP). The service owns the business operation. The transaction wraps the business operation — so `@Transactional` goes on the service.
+### `@Transactional` on the Service, Not the Resource
 
 ```
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                        REQUEST FLOW                             │
-  │                                                                 │
-  │   Client                                                        │
-  │     │                                                           │
-  │     ▼                                                           │
-  │   ┌──────────────────────────────────┐                          │
-  │   │  Resource (JAX-RS)               │  No @Transactional       │
-  │   │  • Receives JSON                 │  • Parses DTO → Command  │
-  │   │  • Returns HTTP Response         │  • Pattern matches result│
-  │   └──────────────┬───────────────────┘                          │
-  │                  │ LendCommand (validated domain types)          │
-  │                  ▼                                               │
-  │   ┌──────────────────────────────────┐                          │
-  │   │  Service                         │  @Transactional          │
-  │   │  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │                          │
-  │   │    TX BEGIN                      │                          │
-  │   │  │ • repo.find() → Entity  ◄────┼── Hibernate manages it   │
-  │   │    • Business rules              │                          │
-  │   │  │ • repo.persist() if new       │                          │
-  │   │    • Entity → Record (convert)   │                          │
-  │   │  │ TX COMMIT (auto-flush)        │                          │
-  │   │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │                          │
-  │   └──────────────┬───────────────────┘                          │
-  │                  │ LendingResult (sealed, contains records)      │
-  │                  ▼                                               │
-  │   ┌──────────────────────────────────┐                          │
-  │   │  Resource (pattern match)        │                          │
-  │   │  Success → 200 OK               │                          │
-  │   │  NotFound → 404                  │                          │
-  │   │  AlreadyLent → 409              │                          │
-  │   └──────────────────────────────────┘                          │
-  └─────────────────────────────────────────────────────────────────┘
+Resource (no TX)          Service (@Transactional)
+  parse DTO                 TX BEGIN
+  call service ──────────→   repo.find() → managed entity
+  pattern match result ←──   business rules + persist
+  build HTTP response        TX COMMIT (auto-flush)
 ```
 
-**Why not on the resource?**
+Entities live and die inside the transaction. What escapes is an immutable record inside a sealed result.
 
-```
-  ❌ @Transactional on Resource          ✅ @Transactional on Service
-  ┌─────────────────────────┐            ┌─────────────────────────┐
-  │ Resource                │            │ Resource                │
-  │ ┌─ TX ────────────────┐ │            │ (no TX)                 │
-  │ │ parse DTO           │ │            │  parse DTO              │
-  │ │ call service        │ │            │  call service ──┐       │
-  │ │ build Response ◄──┐ │ │            │  match result   │       │
-  │ │ (entity still      │ │ │            │  build Response │       │
-  │ │  alive here —      │ │ │            └─────────────────┘       │
-  │ │  lazy load risk!)  │ │ │                              │       │
-  │ └────────────────────┘ │            ┌───────────────────▼─────┐
-  │  TX open too long      │            │ Service                 │
-  │  Entity leaks to HTTP  │            │ ┌─ TX ───────────────┐  │
-  └─────────────────────────┘            │ │ entities live HERE │  │
-                                         │ │ convert → records  │  │
-                                         │ └───────────────────┘  │
-                                         │  records escape (safe) │
-                                         └────────────────────────┘
-```
+---
 
-The problems with `@Transactional` on the resource:
-- Transaction stays open while building the HTTP response — longer than needed
-- Entities leak into the resource — tempts you to skip the record conversion
-- `LazyInitializationException` risk if you access unloaded relations in the response builder
-- Mixes concerns — the resource shouldn't know a database exists
+## Infrastructure Notes
 
-**The rule**: entities live and die inside the `@Transactional` service method. What comes out is an immutable record inside a sealed result. The resource only sees records, never entities.
+### Flyway Migrations
 
-```java
-// ✅ Service owns the transaction
-@ApplicationScoped
-public class LendingService {
-
-    @Inject LendingRepository lendingRepository;
-    @Inject MemberRepository memberRepository;
-
-    @Transactional
-    public LendingResult lend(LendCommand command) {
-        var member = memberRepository.findByMemberId(command.memberId())
-            .orElse(null);
-        if (member == null)
-            return new LendingResult.MemberNotFound(command.memberId());
-
-        // ... business rules, persist, convert entity → record ...
-        return new LendingResult.Success(/* BookLendingResult record */);
-    }
-}
-```
-
-**F# parallel**: In F#, your workflow function is the unit of work. You'd wrap it in a `transaction { }` computation expression or let the infrastructure handle it. The HTTP handler just calls the workflow and maps the result. Same idea — the boundary between "database-aware" and "HTTP-aware" is the service method.
-
-### 14. Test Configuration — Separate `application.properties`
-
-Quarkus looks for `src/test/resources/application.properties` and uses it **instead of** the main one during tests. This lets you isolate test settings without polluting your dev/prod config.
-
-**Why bother?** Without it, your tests inherit whatever's in the main config. If you enable Flyway, switch Hibernate to `validate`, or change logging in main — your tests break. A separate test config keeps them independent.
-
-**File layout:**
-
-```
-src/main/resources/application.properties    ← dev + prod
-src/test/resources/application.properties    ← tests only (overrides main)
-```
-
-**What to put in the test config:**
+Flyway owns the schema — Hibernate DDL generation is disabled.
 
 ```properties
-# ── Dev Services (test container) ──
-# Quarkus auto-starts a PostgreSQL container for tests.
-# These settings control THAT container, not your real DB.
-quarkus.datasource.db-kind=postgresql
-quarkus.devservices.enabled=true
-quarkus.datasource.devservices.image-name=postgres:17       # pin version
-quarkus.datasource.devservices.db-name=book_lending_test    # distinct name
-quarkus.datasource.devservices.username=test
-quarkus.datasource.devservices.password=test
-
-# ── Hibernate ──
-# drop-and-create = clean schema every test run
-quarkus.hibernate-orm.schema-management.strategy=drop-and-create
-quarkus.hibernate-orm.log.sql=true    # see queries in test output
-
-# ── Flyway ──
-# Off — Hibernate manages schema via drop-and-create
-quarkus.flyway.migrate-at-start=false
+quarkus.hibernate-orm.schema-management.strategy=none
+quarkus.flyway.migrate-at-start=true
 ```
 
-**Key differences from main config:**
+### PanacheEntity Uses Sequences, Not BIGSERIAL
 
-| Setting | Main (dev/prod) | Test |
-|---|---|---|
-| Hibernate schema | `%dev.drop-and-create` / `%prod.none` | `drop-and-create` (always clean) |
-| Flyway | Depends on environment | Off — Hibernate owns the schema |
-| Dev Services image | Default (latest) | Pinned (`postgres:17`) for reproducibility |
-| DB name | Default | `book_lending_test` — distinct from dev |
-| SQL logging | Off | On — useful for debugging test failures |
+Panache uses `GenerationType.SEQUENCE` with `INCREMENT BY 50` (batch allocation). Your migrations need:
 
-**How it works at runtime:**
-
-```
-./mvnw quarkus:dev  → src/main/resources/application.properties (%dev profile)
-./mvnw test         → src/test/resources/application.properties (overrides main)
+```sql
+CREATE SEQUENCE book_SEQ START WITH 1 INCREMENT BY 50;
+CREATE TABLE book (
+    id BIGINT NOT NULL PRIMARY KEY,
+    ...
+);
 ```
 
-Both spin up a Testcontainers PostgreSQL via Dev Services, but with independent settings. The test container is ephemeral — created before tests, destroyed after.
+| Entity | Sequence expected |
+|--------|------------------|
+| `Book` | `book_SEQ` |
+| `Member` | `member_SEQ` |
+| `BookLending` | `book_lending_SEQ` |
+| `BookItem` | `bookitem_SEQ` |
 
-**Test types and what they need:**
+### Hibernate Dirty Checking
 
-| Test type | Needs `@QuarkusTest`? | Needs Dev Services? | Example |
-|---|---|---|---|
-| Pure domain (value types, sealed results) | No | No | `ValueTypeTest`, `SealedResultTest` |
-| Integration (REST endpoints) | Yes | Yes (auto) | `BookItemResourceTest` |
+- **New entity** → must call `persist()`
+- **Loaded entity** → mutate fields, auto-flushed at commit (no explicit save)
 
-Pure domain tests don't touch the container at all — they run in milliseconds. Only `@QuarkusTest` classes trigger Dev Services and the full Quarkus lifecycle.
+### Test Configuration
+
+`src/test/resources/application.properties` overrides main config:
+- `drop-and-create` for clean schema each run
+- Flyway off (Hibernate owns schema in tests)
+- Pinned Postgres image for reproducibility
+
+---
+
+## Related Docs
+
+| Doc | Topic |
+|-----|-------|
+| [EITHER-COMPOSITION.md](EITHER-COMPOSITION.md) | Deep dive on Either, map vs flatMap, railway pattern |
+| [FUNCTIONAL-MINDSET.md](FUNCTIONAL-MINDSET.md) | When and why to use functional style, trade-offs |
+| [PESSIMISTIC-LOCKING.md](PESSIMISTIC-LOCKING.md) | Concurrent access patterns |
+| [FLYWAY-HIBERNATE-GOTCHAS.md](FLYWAY-HIBERNATE-GOTCHAS.md) | Migration pitfalls |
+| [JPA-TRICKS.md](JPA-TRICKS.md) | Hibernate/Panache patterns |
 
 ## Tech Stack
 
@@ -493,4 +263,4 @@ Pure domain tests don't touch the container at all — they run in milliseconds.
 - RESTEasy Reactive + Jackson
 - PostgreSQL (via Dev Services)
 - Flyway
-- Hibernate Validator
+- Micrometer + Prometheus
