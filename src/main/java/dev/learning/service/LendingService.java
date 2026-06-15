@@ -28,6 +28,7 @@ import java.util.Optional;
 public class LendingService
 {
 
+    private static final int MAXIMUM_LENT_PER_MEMBER = 5;
     @Inject
     MemberRepository memberRepository;
 
@@ -97,8 +98,20 @@ public class LendingService
     {
         return findMember(lendCommand)
                 .flatMap(this::checkOverdue)
+                .flatMap(this::checkMaximumLentNumber)
                 .flatMap(m -> findBookItemAndMember(lendCommand, m))
                 .flatMap(this::checkIfAlreadyLent)
                 .fold(err -> err, this::persistAndReturnResult);
+    }
+
+    private Either<LendingResult, Object> checkMaximumLentNumber(Member member) {
+
+        var memberId = new MemberId(member.id);
+        var lentBooks = bookLendingRepository.listBookLendingBorrowed(memberId);
+        if (lentBooks.size() >= MAXIMUM_LENT_PER_MEMBER) {
+            return Either.left(new LendingResult.MaximumLimitReached(memberId));
+        }
+        return Either.right(new Object());
+
     }
 }
