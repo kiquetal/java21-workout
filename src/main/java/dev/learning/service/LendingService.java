@@ -104,14 +104,14 @@ public class LendingService
                 .fold(err -> err, this::persistAndReturnResult);
     }
 
-    private Either<LendingResult, Object> checkMaximumLentNumber(Member member) {
+    private Either<LendingResult, Member> checkMaximumLentNumber(Member member) {
 
         var memberId = new MemberId(member.id);
         var lentBooks = bookLendingRepository.listBookLendingBorrowed(memberId);
         if (lentBooks.size() >= MAXIMUM_LENT_PER_MEMBER) {
             return Either.left(new LendingResult.MaximumLimitReached(memberId));
         }
-        return Either.right(new Object());
+        return Either.right(member);
 
     }
 }
