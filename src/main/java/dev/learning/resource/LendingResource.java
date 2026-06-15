@@ -4,7 +4,6 @@ package dev.learning.resource;
 import dev.learning.domain.command.LendCommand;
 import dev.learning.domain.result.lending.LendingResult;
 import dev.learning.domain.type.book_item.BookItemId;
-import dev.learning.domain.type.lending.LendStatus;
 import dev.learning.domain.type.member.MemberId;
 import dev.learning.dto.ErrorResponse;
 import dev.learning.dto.LendRequest;
@@ -17,8 +16,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
-import java.time.ZoneOffset;
 
 @Path("/api/lendings")
 @Produces(MediaType.APPLICATION_JSON)
@@ -33,10 +30,7 @@ public class LendingResource
     public Response register(@Valid LendRequest request) {
         var command = new LendCommand(
             new BookItemId(request.bookId()),
-            new MemberId(request.memberId()),
-            java.time.Instant.now(),
-            request.dueDate().atStartOfDay(ZoneOffset.UTC).toInstant(),
-            LendStatus.LENT
+            new MemberId(request.memberId())
         );
 
         var result = lendingService.lend(command);
