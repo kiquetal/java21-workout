@@ -139,6 +139,38 @@ Apply architectural safeguards (retries, timeouts, circuit breakers) directly to
 
 ---
 
+## 🗄️ Infrastructure & ORM Rulings (Panache + Flyway)
+
+This section defines how our database schema migrations (SQL files) and JPA/Panache Entities (Java classes) interact under Quarkus to avoid validation mismatches.
+
+### 1. Table and Column Mapping ("The First Encounter")
+By default, Hibernate maps Java classes and fields literally to SQL tables and columns:
+*   `BookItem` entity class maps to SQL table `BookItem` (not `book_item`).
+*   `publishDate` field maps to SQL column `publishDate` (not `publish_date`).
+
+**The Annotation Ruling:** To map clean snake_case database tables/columns (like `book_lending`), you **must** use explicit annotations to override Hibernate's literal naming strategy:
+```java
+@Table(name = "book_lending")
+@Column(name = "borrowed_at")
+```
+
+### 2. Sequence Generators (No `BIGSERIAL`)
+Quarkus Panache relies on pre-fetching blocks of IDs from database sequences for batched insert performance optimization. 
+*   **The SQL Ruling:** In Flyway migrations, never use `BIGSERIAL`. Instead, create a matching sequence with an increment of 50 for each entity:
+```sql
+CREATE SEQUENCE BookItem_SEQ START WITH 1 INCREMENT BY 50;
+```
+
+### 3. Enum Validation Width
+When mapping enums using `@Enumerated(EnumType.STRING)` without specifying a length, Hibernate validates the database column against a default `VARCHAR(255)`. Ensure matching Flyway fields allow safe widths or match the length annotation explicitly.
+
+*   **Key Files to Study:**
+    *   [`FLYWAY-HIBERNATE-GOTCHAS.md`](file:///mydata/codes/2026/java21-workout/FLYWAY-HIBERNATE-GOTCHAS.md) — Under-the-hood explanation of the Flyway mapping gotchas.
+    *   [`V1__initial_schema.sql`](file:///mydata/codes/2026/java21-workout/src/main/resources/db/migration/V1__initial_schema.sql) — The production-ready database schema implementation.
+    *   [`src/main/java/dev/learning/domain/entity/`](file:///mydata/codes/2026/java21-workout/src/main/java/dev/learning/domain/entity/) — The JPA Entity classes directory.
+
+---
+
 ## 🏃 Active Practice Workout
 
 Ready to put this roadmap into action? Implement the complete **"Return a Book"** feature following these exact concepts end-to-end:
