@@ -22,6 +22,16 @@ Welcome to your functional learning roadmap! This document serves as a centraliz
   - [x] Understand lightweight virtual threads and structured scope theories.
   - [ ] Leverage virtual thread scheduling (`@RunOnVirtualThread`) and parallel subtasks (`StructuredTaskScope`).
 
+### 🔮 Future Advanced Milestones (Electives)
+- [ ] **Milestone 6: Functional Error Accumulation (Applicative Validation)**
+  - [ ] Implement an aggregative error container to collect all failures instead of short-circuiting.
+- [ ] **Milestone 7: Pure Functional State Transitions (Event Sourcing)**
+  - [ ] Model state transitions as pure `State + Event -> NewState` reducers.
+- [ ] **Milestone 8: Context Passing & Functional Dependency Injection**
+  - [ ] Use Java 21 curried functions or Reader Monad context passing to eliminate framework `@Inject`.
+- [ ] **Milestone 9: Resilient Functional Pipelines (Decorators)**
+  - [ ] Create higher-order functions to decorate pipelines with retries or circuit breakers.
+
 ---
 
 ## 🗺️ Detailed Milestones
@@ -98,6 +108,34 @@ Scale and optimize execution paths cleanly when scaling beyond sequential depend
 *   **Key Files to Study:**
     *   [`FUNCTIONAL-MINDSET.md#L70-L89`](file:///mydata/codes/2026/java21-workout/FUNCTIONAL-MINDSET.md#L70-L89) — Virtual Threads and Structured Concurrency orchestration.
     *   [`.kiro/steering/java21-modern.md#L31-L40`](file:///mydata/codes/2026/java21-workout/.kiro/steering/java21-modern.md#L31-L40) — Steering rules on modern concurrency constraints.
+
+---
+
+### 📍 Milestone 6: Functional Error Accumulation (Applicative Validation)
+Model non-short-circuiting validations where all errors must be collected at once (e.g. form fields).
+
+*   **The Idea:** Instead of stopping on the first field failure (like `flatMap`), compile errors across all independent value checks in parallel (using an applicative container) and return a combined list of errors if any occurred.
+
+---
+
+### 📍 Milestone 7: Pure Functional State Transitions (Event Sourcing)
+Derive domain entity states from histories of immutable events.
+
+*   **The Idea:** Model system state as the result of folding/reducing a stream of historical domain events (e.g., `BookLent`, `BookReturned`, `OverdueFeeCharged`) through a pure function: `(State, Event) -> State`.
+
+---
+
+### 📍 Milestone 8: Context Passing & Functional Dependency Injection
+Keep domain logic completely independent of runtime framework annotations.
+
+*   **The Idea:** Decouple domain services from dependency injection containers (like Quarkus `@Inject`). Instead, pass external resources (repositories/connections) explicitly via currying, parameter passing, or the Reader Monad.
+
+---
+
+### 📍 Milestone 9: Monadic Pipeline Resiliency (Functional Decorators)
+Apply architectural safeguards (retries, timeouts, circuit breakers) directly to functional pipelines.
+
+*   **The Idea:** Decorate standard function chains `Function<A, Either<L, B>>` dynamically using higher-order functions to handle transient external failures seamlessly without polluting domain business rules.
 
 ---
 
