@@ -61,6 +61,9 @@ return findMember(cmd)
 
 Each step can succeed (Right) or fail (Left). First failure stops the chain — error flows to `fold`.
 
+![Railway Pattern Diagram](./diagrams/railway-pattern.png)
+
+
 ### When This Style Helps vs Doesn't
 
 | ✅ Use it when | ❌ Don't force it when |
@@ -106,6 +109,9 @@ src/main/java/dev/learning/
 ├── resource/        # JAX-RS endpoints — parse DTOs, pattern match results → HTTP
 └── dto/             # Request/response records — API boundary
 ```
+
+![Book Lending Architecture Diagram](./diagrams/book-lending-architecture.png)
+
 
 ### Layer Rules
 
@@ -254,6 +260,7 @@ CREATE TABLE book (
 | [PESSIMISTIC-LOCKING.md](PESSIMISTIC-LOCKING.md) | Concurrent access patterns |
 | [FLYWAY-HIBERNATE-GOTCHAS.md](FLYWAY-HIBERNATE-GOTCHAS.md) | Migration pitfalls |
 | [JPA-TRICKS.md](JPA-TRICKS.md) | Hibernate/Panache patterns |
+| [.kiro/steering/tldraw-diagrams.md](.kiro/steering/tldraw-diagrams.md) | Steering guide for Puppeteer + tldraw-cli diagram rendering pipeline |
 
 ## Tech Stack
 
