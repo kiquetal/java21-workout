@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "tldraw": {
+      "command": "/mydata/.nvm/versions/node/v22.14.0/bin/npx",
+      "args": ["-y", "@talhaorak/tldraw-mcp"],
+      "env": {
+        "TLDRAW_DIR": "/home/kiquetal/.tldraw"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
