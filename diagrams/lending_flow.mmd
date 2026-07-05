@@ -1,0 +1,46 @@
+graph LR
+    %% Custom Styling
+    classDef success fill:#1b4d3e,stroke:#2eca7f,stroke-width:2px,color:#fff;
+    classDef failure fill:#6c2d2d,stroke:#fa5c5c,stroke-width:2px,color:#fff;
+    classDef step fill:#2d3748,stroke:#4a5568,stroke-width:2px,color:#fff;
+    classDef input fill:#1a202c,stroke:#718096,stroke-width:1px,color:#a0aec0;
+
+    %% Nodes
+    In([LendCommand]):::input
+    
+    Step1[1. findMember]:::step
+    Step2[2. checkOverdue]:::step
+    Step3[3. checkMaximumLent]:::step
+    Step4[4. findBookItemAndMember]:::step
+    Step5[5. checkIfAlreadyLent]:::step
+    Step6[6. persistAndReturnResult]:::step
+
+    %% Failures
+    Err1{{MemberNotFound}}:::failure
+    Err2{{MemberHasOverdueBooks}}:::failure
+    Err3{{MaximumLimitReached}}:::failure
+    Err4{{BookNotFound}}:::failure
+    Err5{{AlreadyLent}}:::failure
+
+    %% Success Outcome
+    Success{{Success}}:::success
+
+    %% Connections
+    In --> Step1
+    
+    Step1 -->|Ok| Step2
+    Step1 -.->|Err| Err1
+    
+    Step2 -->|Ok| Step3
+    Step2 -.->|Err| Err2
+    
+    Step3 -->|Ok| Step4
+    Step3 -.->|Err| Err3
+    
+    Step4 -->|Ok| Step5
+    Step4 -.->|Err| Err4
+    
+    Step5 -->|Ok| Step6
+    Step5 -.->|Err| Err5
+    
+    Step6 --> Success
