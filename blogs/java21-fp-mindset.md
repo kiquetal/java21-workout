@@ -26,6 +26,11 @@ sealed interface Result<T, E> {
     record Err<T, E>(E error) implements Result<T, E> {}
 }
 ```
+
+Here is a visual representation of how the `Result` container acts as a box holding either a success (`Ok`) or a failure (`Err`) track:
+
+![The Monadic Result Container](file:///mydata/codes/2026/java21-workout/diagrams/result_box.png)
+
 Here we can see the result as a sealed interface, this give us the order to always evaluate the two cases.
 
 In addition to Railway-Pattern. we need to create a context for specific use case, we will use the example of a LendingService for a bookstore.
