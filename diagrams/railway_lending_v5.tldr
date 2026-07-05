@@ -1,0 +1,491 @@
+{
+  "tldrawFileFormatVersion": 1,
+  "schema": {
+    "schemaVersion": 2,
+    "sequences": {
+      "com.tldraw.store": 4,
+      "com.tldraw.asset": 1,
+      "com.tldraw.camera": 1,
+      "com.tldraw.document": 2,
+      "com.tldraw.instance": 22,
+      "com.tldraw.instance_page_state": 5,
+      "com.tldraw.page": 1,
+      "com.tldraw.instance_presence": 5,
+      "com.tldraw.pointer": 1,
+      "com.tldraw.shape": 4,
+      "com.tldraw.user": 1,
+      "com.tldraw.asset.image": 2,
+      "com.tldraw.asset.video": 2,
+      "com.tldraw.asset.bookmark": 0,
+      "com.tldraw.shape.group": 0,
+      "com.tldraw.shape.text": 1,
+      "com.tldraw.shape.bookmark": 0,
+      "com.tldraw.shape.draw": 1,
+      "com.tldraw.shape.geo": 3,
+      "com.tldraw.shape.note": 4,
+      "com.tldraw.shape.line": 0,
+      "com.tldraw.shape.frame": 0,
+      "com.tldraw.shape.arrow": 1,
+      "com.tldraw.shape.highlight": 0,
+      "com.tldraw.shape.embed": 4,
+      "com.tldraw.shape.image": 2,
+      "com.tldraw.shape.video": 1,
+      "com.tldraw.binding.arrow": 0
+    }
+  },
+  "records": [
+    {
+      "gridSize": 10,
+      "name": "Railway Lending Flow",
+      "meta": {},
+      "id": "document:document",
+      "typeName": "document"
+    },
+    {
+      "id": "page:page",
+      "name": "Page 1",
+      "index": "a1",
+      "meta": {},
+      "typeName": "page"
+    },
+    {
+      "x": 100,
+      "y": 50,
+      "id": "shape:title",
+      "type": "text",
+      "parentId": "page:page",
+      "index": "a0",
+      "props": {
+        "text": "Railway Oriented Programming - Bookstore Lending Flow",
+        "size": "l",
+        "color": "black",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 100,
+      "y": 150,
+      "id": "shape:step1",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a10",
+      "props": {
+        "geo": "rectangle",
+        "text": "1. findMember",
+        "color": "blue",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 380,
+      "y": 150,
+      "id": "shape:step2",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a11",
+      "props": {
+        "geo": "rectangle",
+        "text": "2. checkOverdue",
+        "color": "blue",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 660,
+      "y": 150,
+      "id": "shape:step3",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a12",
+      "props": {
+        "geo": "rectangle",
+        "text": "3. checkLimit",
+        "color": "blue",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 940,
+      "y": 150,
+      "id": "shape:step4",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a13",
+      "props": {
+        "geo": "rectangle",
+        "text": "4. findBook",
+        "color": "blue",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 1220,
+      "y": 150,
+      "id": "shape:step5",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a14",
+      "props": {
+        "geo": "rectangle",
+        "text": "5. checkIfAlreadyLent",
+        "color": "blue",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 1500,
+      "y": 150,
+      "id": "shape:step6",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a15",
+      "props": {
+        "geo": "rectangle",
+        "text": "Success",
+        "color": "green",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 100,
+      "y": 300,
+      "id": "shape:err1",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a20",
+      "props": {
+        "geo": "ellipse",
+        "text": "MemberNotFound",
+        "color": "red",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 380,
+      "y": 300,
+      "id": "shape:err2",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a21",
+      "props": {
+        "geo": "ellipse",
+        "text": "MemberHasOverdueBooks",
+        "color": "red",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 660,
+      "y": 300,
+      "id": "shape:err3",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a22",
+      "props": {
+        "geo": "ellipse",
+        "text": "MaximumLimitReached",
+        "color": "red",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 940,
+      "y": 300,
+      "id": "shape:err4",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a23",
+      "props": {
+        "geo": "ellipse",
+        "text": "BookNotFound",
+        "color": "red",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 1220,
+      "y": 300,
+      "id": "shape:err5",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a24",
+      "props": {
+        "geo": "ellipse",
+        "text": "AlreadyLent",
+        "color": "red",
+        "fill": "semi",
+        "w": 200,
+        "h": 80,
+        "size": "s",
+        "font": "sans"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_step_0",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a30",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 300,
+          "y": 190
+        },
+        "end": {
+          "x": 380,
+          "y": 190
+        },
+        "color": "black",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_step_1",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a31",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 580,
+          "y": 190
+        },
+        "end": {
+          "x": 660,
+          "y": 190
+        },
+        "color": "black",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_step_2",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a32",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 860,
+          "y": 190
+        },
+        "end": {
+          "x": 940,
+          "y": 190
+        },
+        "color": "black",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_step_3",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a33",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 1140,
+          "y": 190
+        },
+        "end": {
+          "x": 1220,
+          "y": 190
+        },
+        "color": "black",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_step_4",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a34",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 1420,
+          "y": 190
+        },
+        "end": {
+          "x": 1500,
+          "y": 190
+        },
+        "color": "black",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_err_0",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a40",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 200,
+          "y": 230
+        },
+        "end": {
+          "x": 200,
+          "y": 300
+        },
+        "color": "grey",
+        "dash": "dashed",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_err_1",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a41",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 480,
+          "y": 230
+        },
+        "end": {
+          "x": 480,
+          "y": 300
+        },
+        "color": "grey",
+        "dash": "dashed",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_err_2",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a42",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 760,
+          "y": 230
+        },
+        "end": {
+          "x": 760,
+          "y": 300
+        },
+        "color": "grey",
+        "dash": "dashed",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_err_3",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a43",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 1040,
+          "y": 230
+        },
+        "end": {
+          "x": 1040,
+          "y": 300
+        },
+        "color": "grey",
+        "dash": "dashed",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    },
+    {
+      "id": "shape:arrow_err_4",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a44",
+      "x": 0,
+      "y": 0,
+      "props": {
+        "start": {
+          "x": 1320,
+          "y": 230
+        },
+        "end": {
+          "x": 1320,
+          "y": 300
+        },
+        "color": "grey",
+        "dash": "dashed",
+        "arrowheadEnd": "arrow"
+      },
+      "typeName": "shape"
+    }
+  ]
+}

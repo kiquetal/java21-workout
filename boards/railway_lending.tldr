@@ -1,0 +1,535 @@
+{
+  "tldrawFileFormatVersion": 1,
+  "schema": {
+    "schemaVersion": 2,
+    "sequences": {
+      "com.tldraw.store": 5,
+      "com.tldraw.asset": 1,
+      "com.tldraw.camera": 1,
+      "com.tldraw.document": 2,
+      "com.tldraw.instance": 26,
+      "com.tldraw.instance_page_state": 5,
+      "com.tldraw.page": 1,
+      "com.tldraw.instance_presence": 6,
+      "com.tldraw.pointer": 1,
+      "com.tldraw.shape": 4,
+      "com.tldraw.user": 1,
+      "com.tldraw.asset.image": 6,
+      "com.tldraw.asset.video": 5,
+      "com.tldraw.asset.bookmark": 2,
+      "com.tldraw.shape.group": 0,
+      "com.tldraw.shape.text": 4,
+      "com.tldraw.shape.bookmark": 2,
+      "com.tldraw.shape.draw": 5,
+      "com.tldraw.shape.geo": 11,
+      "com.tldraw.shape.note": 13,
+      "com.tldraw.shape.line": 5,
+      "com.tldraw.shape.frame": 1,
+      "com.tldraw.shape.arrow": 8,
+      "com.tldraw.shape.highlight": 4,
+      "com.tldraw.shape.embed": 4,
+      "com.tldraw.shape.image": 5,
+      "com.tldraw.shape.video": 4,
+      "com.tldraw.binding.arrow": 1
+    }
+  },
+  "records": [
+    {
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "title",
+          "evidence": []
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-title",
+      "type": "text",
+      "parentId": "page:page",
+      "index": "a0nrU",
+      "props": {
+        "color": "black",
+        "size": "xl",
+        "font": "draw",
+        "textAlign": "start",
+        "w": 620,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "java21-workout"
+                }
+              ]
+            }
+          ]
+        },
+        "scale": 1,
+        "autoSize": false
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "meta": {},
+      "id": "camera:page:page",
+      "typeName": "camera"
+    },
+    {
+      "x": 370,
+      "y": 100,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "step",
+          "evidence": [
+            "image",
+            "file"
+          ]
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-choose-input",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a2U6Y",
+      "props": {
+        "geo": "rectangle",
+        "dash": "solid",
+        "url": "",
+        "w": 260,
+        "h": 116,
+        "growY": 0,
+        "scale": 1,
+        "labelColor": "black",
+        "color": "light-blue",
+        "fill": "semi",
+        "size": "m",
+        "font": "draw",
+        "align": "middle",
+        "verticalAlign": "middle",
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "User selects an image"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 260,
+      "y": 158,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "connection",
+          "evidence": []
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-arrow-open-app-choose-input",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a5ePr",
+      "props": {
+        "kind": "elbow",
+        "labelColor": "black",
+        "color": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "m",
+        "arrowheadStart": "none",
+        "arrowheadEnd": "arrow",
+        "font": "draw",
+        "start": {
+          "x": 0,
+          "y": 0
+        },
+        "end": {
+          "x": 110,
+          "y": 0
+        },
+        "bend": 0,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph"
+            }
+          ]
+        },
+        "labelPosition": 0.5,
+        "scale": 1,
+        "elbowMidPoint": 0.5
+      },
+      "typeName": "shape"
+    },
+    {
+      "editingShapeId": null,
+      "croppingShapeId": null,
+      "selectedShapeIds": [],
+      "hoveredShapeId": null,
+      "erasingShapeIds": [],
+      "hintingShapeIds": [],
+      "focusedGroupId": null,
+      "meta": {},
+      "id": "instance_page_state:cE0_ZgDyL2a76lQ3IQ5WL",
+      "pageId": "page:page",
+      "typeName": "instance_page_state"
+    },
+    {
+      "x": 630,
+      "y": 158,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "connection",
+          "evidence": []
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-arrow-choose-input-process-input",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a6O7X",
+      "props": {
+        "kind": "elbow",
+        "labelColor": "black",
+        "color": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "m",
+        "arrowheadStart": "none",
+        "arrowheadEnd": "arrow",
+        "font": "draw",
+        "start": {
+          "x": 0,
+          "y": 0
+        },
+        "end": {
+          "x": 110,
+          "y": 0
+        },
+        "bend": 0,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph"
+            }
+          ]
+        },
+        "labelPosition": 0.5,
+        "scale": 1,
+        "elbowMidPoint": 0.5
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 1110,
+      "y": 100,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "step",
+          "evidence": [
+            "download",
+            "export"
+          ]
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-get-output",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a4aSj",
+      "props": {
+        "geo": "rectangle",
+        "dash": "solid",
+        "url": "",
+        "w": 260,
+        "h": 116,
+        "growY": 0,
+        "scale": 1,
+        "labelColor": "black",
+        "color": "green",
+        "fill": "semi",
+        "size": "m",
+        "font": "draw",
+        "align": "middle",
+        "verticalAlign": "middle",
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "User downloads the result"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 1000,
+      "y": 158,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "connection",
+          "evidence": []
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-arrow-process-input-get-output",
+      "type": "arrow",
+      "parentId": "page:page",
+      "index": "a7SN2",
+      "props": {
+        "kind": "elbow",
+        "labelColor": "black",
+        "color": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "m",
+        "arrowheadStart": "none",
+        "arrowheadEnd": "arrow",
+        "font": "draw",
+        "start": {
+          "x": 0,
+          "y": 0
+        },
+        "end": {
+          "x": 110,
+          "y": 0
+        },
+        "bend": 0,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph"
+            }
+          ]
+        },
+        "labelPosition": 0.5,
+        "scale": 1,
+        "elbowMidPoint": 0.5
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 0,
+      "y": 100,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "step",
+          "evidence": [
+            "app"
+          ]
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-open-app",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a1HCj",
+      "props": {
+        "geo": "rectangle",
+        "dash": "solid",
+        "url": "",
+        "w": 260,
+        "h": 116,
+        "growY": 0,
+        "scale": 1,
+        "labelColor": "black",
+        "color": "blue",
+        "fill": "semi",
+        "size": "m",
+        "font": "draw",
+        "align": "middle",
+        "verticalAlign": "middle",
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "User opens Java21 Workout"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "typeName": "shape"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "lastActivityTimestamp": 0,
+      "meta": {},
+      "id": "pointer:8T4UONc13n1K8LOef_dyI",
+      "typeName": "pointer"
+    },
+    {
+      "x": 740,
+      "y": 100,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "tldrawMcp": {
+          "diagramId": "workflow-mr5q5ujl",
+          "repoName": "java21-workout",
+          "kind": "step",
+          "evidence": [
+            "ai",
+            "generate",
+            "process"
+          ]
+        }
+      },
+      "id": "shape:workflow-mr5q5ujl-process-input",
+      "type": "geo",
+      "parentId": "page:page",
+      "index": "a3hRz",
+      "props": {
+        "geo": "rectangle",
+        "dash": "solid",
+        "url": "",
+        "w": 260,
+        "h": 116,
+        "growY": 0,
+        "scale": 1,
+        "labelColor": "black",
+        "color": "violet",
+        "fill": "semi",
+        "size": "m",
+        "font": "draw",
+        "align": "middle",
+        "verticalAlign": "middle",
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "AI generates the result"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "typeName": "shape"
+    },
+    {
+      "meta": {},
+      "id": "page:page",
+      "name": "Page 1",
+      "index": "a1",
+      "typeName": "page"
+    },
+    {
+      "gridSize": 10,
+      "name": "railway_lending",
+      "meta": {},
+      "id": "document:document",
+      "typeName": "document"
+    },
+    {
+      "followingUserId": null,
+      "opacityForNextShape": 1,
+      "stylesForNextShape": {},
+      "brush": null,
+      "scribbles": [],
+      "cursor": {
+        "type": "default",
+        "rotation": 0
+      },
+      "isFocusMode": false,
+      "exportBackground": true,
+      "isDebugMode": false,
+      "isToolLocked": false,
+      "screenBounds": {
+        "x": 0,
+        "y": 0,
+        "w": 1080,
+        "h": 720
+      },
+      "insets": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "zoomBrush": null,
+      "isGridMode": false,
+      "isPenMode": false,
+      "chatMessage": "",
+      "isChatting": false,
+      "highlightedUserIds": [],
+      "isFocused": false,
+      "devicePixelRatio": 1,
+      "isCoarsePointer": false,
+      "isHoveringCanvas": null,
+      "openMenus": [],
+      "isChangingStyle": false,
+      "isReadonly": false,
+      "meta": {},
+      "duplicateProps": null,
+      "cameraState": "idle",
+      "id": "instance:instance",
+      "currentPageId": "page:page",
+      "typeName": "instance"
+    }
+  ]
+}
