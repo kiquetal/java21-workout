@@ -92,29 +92,32 @@ sealed interface Result<T, E> {
 ```
 The most important part here is the signature, we need to deal with the *right* side of the result and then apply the function which returns a new type.
 
-### 💡 A Key Realization: Why do `map` and `flatMap` handle `Err` identically?
+### 💡 A Key Realization: Identical Decision Trees
 
-If you look closely at the Java implementation of both methods, you'll notice a fascinating detail. The code block for handling an existing error is **exactly identical** in both:
+If you look closely at the Java implementation of both methods, you'll notice their decision-making tree is **exactly identical**. Both operators pattern-match on `this` to determine the execution path:
 
 ```java
-case Err<T, E> err -> new Err<>(err.error());
+return switch (this) {
+    case Ok<T, E> ok -> // Execute success path
+    case Err<T, E> err -> new Err<>(err.error()); // Bypass on failure
+};
 ```
 
-If they do the exact same thing on errors, why do we need two different operators? 
+#### The Only Difference: Who wraps the Result?
 
-The distinction is **not how they handle an existing error, but whether they can *produce* a new error from a success**:
+Because the decision tree is identical, the only difference between the two operators lies in **who is responsible for returning the final `Result` container**:
 
-1. **`map` is a "1-Track" Operator (Infallible on Success)**:
-   * The function you pass (`Function<T, U>`) returns a plain value `U`.
-   * It **cannot fail**.
-   * If `map` receives an `Ok`, it applies your function, and *always* wraps the result back inside a `new Ok<>(...)`. You are guaranteed to stay on the green success track.
+1. **`map` (Operator wraps the value)**:
+   * Expects a function that returns a raw value `U` (`T -> U`).
+   * The operator itself is responsible for boxing that value into a `Result` (`new Ok<>(...)`).
+   * *Use case*: When transforming a success value inside the box without returning a new failure.
 
-2. **`flatMap` is a "2-Track" Operator (Fallible on Success)**:
-   * The function you pass (`Function<T, Result<U, E>>`) returns another `Result`.
-   * It **can fail**.
-   * Even if `flatMap` receives an `Ok`, applying your function might return an `Err<E>`. This is how a pipeline step (like checkOverdue) **switches your journey from the green track (Success) to the red track (Failure)**!
+2. **`flatMap` (Mapper function wraps the value)**:
+   * Expects a function that already returns a `Result<U, E>` (`T -> Result<U, E>`).
+   * The operator returns the result of the function directly, avoiding double-wrapping (e.g., `Result<Result<U, E>, E>`).
+   * *Use case*: When chaining operations that can fail on their own.
 
-So, while both simply let errors pass through unchanged, only `flatMap` has the power to shift a happy success over to the error railway track based on a business decision.
+By recognizing that both operators share the same core decision tree, the railway model becomes incredibly clean and simple to reason about!
 
 ---
 
