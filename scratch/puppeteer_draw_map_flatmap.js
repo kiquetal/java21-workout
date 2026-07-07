@@ -347,36 +347,6 @@ async function run() {
       }
     });
 
-    // Arrow showing flatMap switching to failure track (diagonal)
-    editor.createShape({
-      type: 'arrow',
-      x: 0,
-      y: 0,
-      props: {
-        color: 'red',
-        fill: 'none',
-        dash: 'dashed',
-        size: 's',
-        start: { x: 600, y: flatY + 130 },
-        end: { x: 750, y: flatY + 190 },
-        arrowheadStart: 'none',
-        arrowheadEnd: 'arrow',
-        bend: 0
-      }
-    });
-    // Label on the diagonal switch arrow (clean text, no bounding box)
-    editor.createShape({
-      type: 'text',
-      x: 615,
-      y: flatY + 135,
-      props: {
-        richText: makeRichText('On Error'),
-        color: 'red',
-        size: 's',
-        font: 'draw'
-      }
-    });
-
     // Failure Track (red)
     editor.createShape({
       type: 'arrow',
@@ -422,7 +392,7 @@ async function run() {
         richText: makeRichText('Bypasses function'),
         color: 'grey',
         fill: 'none',
-        w: 160,
+        w: 180,
         h: 50,
         size: 's',
         font: 'draw',
