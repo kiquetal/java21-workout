@@ -83,7 +83,7 @@ async function run() {
       }
     });
 
-    // --- Section 1: MAP (1-Track function lifting) ---
+    // --- Section 1: MAP ---
     const mapY = 120;
     editor.createShape({
       type: 'geo',
@@ -91,7 +91,7 @@ async function run() {
       y: mapY,
       props: {
         geo: 'rectangle',
-        richText: makeRichText('MAP operator: lifts a single-track function T ➡️ U\n(Bypasses failure track automatically)'),
+        richText: makeRichText('MAP operator: Shares the identical decision tree switch on Ok/Err.\nThe operator wraps the mapper\'s raw output U in Ok(U).'),
         color: 'black',
         fill: 'none',
         w: 850,
@@ -253,7 +253,7 @@ async function run() {
     });
 
 
-    // --- Section 2: FLATMAP (2-Track function joining) ---
+    // --- Section 2: FLATMAP ---
     const flatY = 400;
     editor.createShape({
       type: 'geo',
@@ -261,7 +261,7 @@ async function run() {
       y: flatY,
       props: {
         geo: 'rectangle',
-        richText: makeRichText('FLATMAP operator: binds a two-track function T ➡️ Result<U, E>\n(Can succeed or switch flows to the failure track)'),
+        richText: makeRichText('FLATMAP operator: Shares the identical decision tree switch on Ok/Err.\nThe mapper function itself returns a Result<U, E> directly to avoid double-wrapping.'),
         color: 'black',
         fill: 'none',
         w: 850,
